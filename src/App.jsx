@@ -6,6 +6,8 @@ import AuthLayout from 'layouts/auth';
 import OthersError from 'views/admin/main/others/404';
 import 'assets/css/Plugins.css';
 import { useState, useEffect } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import { useAuthStore } from './stores/useAuthStore.js';
 
@@ -48,6 +50,8 @@ const App = () => {
     if (!isInitialized) return null; // Wait until rehydration finishes
 
   return (
+    <>
+    <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
     <Routes>
       <Route path="auth/*" element={<AuthLayout />} />
       <Route
@@ -79,6 +83,7 @@ const App = () => {
       <Route path="/" element={<Navigate to="/admin/dashboards/welkome" replace />} />
       <Route path="*" element={<OthersError />} />
     </Routes>
+    </>
   );
 };
 

@@ -36,10 +36,10 @@ const OrderStatus = () => {
               x2="0.999997"
               y2="1"
               stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-dasharray="6 6"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray="6 6"
             />
           </svg>
         </div>
@@ -80,10 +80,10 @@ const OrderStatus = () => {
                 x2="0.999997"
                 y2="1"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-dasharray="6 6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="6 6"
               />
             </svg>
           </div>
@@ -113,10 +113,10 @@ const OrderStatus = () => {
                 x2="0.999997"
                 y2="1"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-dasharray="6 6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="6 6"
               />
             </svg>
           </div>
@@ -144,10 +144,10 @@ const OrderStatus = () => {
                 x2="0.999997"
                 y2="1"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-dasharray="6 6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="6 6"
               />
             </svg>
           </div>

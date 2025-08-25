@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 import Card from "components/card";
 import SearchIcon from "components/icons/SearchIcon";
 import { MdChevronRight, MdChevronLeft } from "react-icons/md";
@@ -97,14 +98,15 @@ function CategoryTable(props) {
             </p>
           ),
           cell: (info) => (
-            <div className="text-sm font-bold text-navy-700 dark:text-white hover:underline cursor-pointer">
-              onClick={() => {
-              if (navigate) {
-                navigate('/admin/main/marketsphere/product-management', {
-                  state: { categoryContext }
-                });
-              }
-            }}
+            <div
+                onClick={() => {
+                  if (navigate) {
+                    navigate('/admin/main/marketsphere/product-management', {
+                      state: { categoryContext }
+                    });
+                  }
+                }}
+                className="text-sm font-bold text-navy-700 dark:text-white hover:underline cursor-pointer">
               {info.getValue()}
             </div>
           ),
@@ -940,7 +942,7 @@ const CategoryManagement = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      console.log("This is the part  1",file);
+      
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -973,11 +975,8 @@ const CategoryManagement = () => {
 
   // Handle adding new items or editing existing ones
   const handleAddItem = async (formData) => {
-    console.log("🔥 handleAddItem triggered");
-
     try {
-
-      console.log("selectedImage inside handleAddItem:", selectedImage);
+      
       // Generate serial number if not provided
       const serialNumber = formData.serialNumber.trim() || await generateSerialNumber();
       
@@ -1049,8 +1048,7 @@ const CategoryManagement = () => {
       handleCloseModal();
     } catch (error) {
       console.error('Error saving item:', error);
-      // Show error to user (you can add toast notification here)
-      alert('Error saving item: ' + error.message);
+      toast.error('Error saving item: ' + error.message);
     }
   };
 
@@ -1097,7 +1095,7 @@ const CategoryManagement = () => {
       setDeleteType('');
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('Error deleting item: ' + error.message);
+      toast.error('Error deleting item: ' + error.message);
     }
   };
 
@@ -1452,14 +1450,10 @@ const CategoryManagement = () => {
                 //   }
                   //  }
                     onClick={() => {
-                      console.log("💡 Clicking Save");
-                      console.log("formData.name:", formData.name);
-                      console.log("selectedImage at click:", selectedImage);
-
                       if (formData.name.trim()) {
                         handleAddItem(formData);
                       } else {
-                        alert('Please enter a name');
+                        toast.error('Please enter a name');
                       }
                     }
                 }

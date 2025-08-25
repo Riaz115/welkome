@@ -37,6 +37,34 @@ const apiCall = async (endpoint, options = {}) => {
   }
 };
 
+const apiCallBrands = async (endpoint, options = {}) => {
+  const url = `/brands${endpoint}`;
+  try {
+    let response;
+    const { method = 'GET', body, headers = {} } = options;
+    const config = { headers };
+    switch (method.toLowerCase()) {
+      case 'get':
+        response = await axiosInstance.get(url, config);
+        break;
+      case 'post':
+        response = await axiosInstance.post(url, body, config);
+        break;
+      case 'put':
+        response = await axiosInstance.put(url, body, config);
+        break;
+      case 'delete':
+        response = await axiosInstance.delete(url, config);
+        break;
+      default:
+        response = await axiosInstance.get(url, config);
+    }
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || `HTTP error! status: ${error.response?.status}`);
+  }
+};
+
 // const apiCall = async (endpoint, options = {}) => {
 //   const url = `/categories${endpoint}`;
 //   const { method = 'GET', body, headers = {} } = options;
@@ -87,12 +115,14 @@ export const useCategoryApiStore = create(devtools((set, get) => ({
   primeCategories: [],
   categories: [],
   subcategories: [],
+  brands: [],
   
   // Loading states
   loading: {
     primeCategories: false,
     categories: false,
     subcategories: false,
+    brands: false,
     creating: false,
     updating: false,
     deleting: false,
@@ -118,6 +148,74 @@ export const useCategoryApiStore = create(devtools((set, get) => ({
       _id: item._id,
       originalData: item
     }));
+  },
+
+  // BRANDS ACTIONS
+  fetchBrands: async () => {
+    set((state) => ({
+      loading: { ...state.loading, brands: true },
+      error: null,
+    }));
+    try {
+      const data = await apiCallBrands('');
+      const formatted = (data?.data || []).map((item, index) => ({
+        id: item._id,
+        name: item.name,
+        image: item.image || "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=100&h=100&fit=crop&crop=center",
+        index: index + 1,
+        _id: item._id,
+        originalData: item,
+      }));
+      set((state) => ({
+        brands: formatted,
+        loading: { ...state.loading, brands: false },
+      }));
+      return data;
+    } catch (error) {
+      set((state) => ({
+        error: error.message,
+        loading: { ...state.loading, brands: false },
+      }));
+      throw error;
+    }
+  },
+  createBrand: async (formData) => {
+    set((state) => ({ loading: { ...state.loading, creating: true }, error: null }));
+    try {
+      const data = await apiCallBrands('', { method: 'POST', body: formData });
+      await get().fetchBrands();
+      set((state) => ({ loading: { ...state.loading, creating: false } }));
+      return data?.data;
+    } catch (error) {
+      set((state) => ({ error: error.message, loading: { ...state.loading, creating: false } }));
+      throw error;
+    }
+  },
+  updateBrand: async (id, formData) => {
+    set((state) => ({ loading: { ...state.loading, updating: true }, error: null }));
+    try {
+      const data = await apiCallBrands(`/${id}`, { method: 'PUT', body: formData });
+      await get().fetchBrands();
+      set((state) => ({ loading: { ...state.loading, updating: false } }));
+      return data?.data;
+    } catch (error) {
+      set((state) => ({ error: error.message, loading: { ...state.loading, updating: false } }));
+      throw error;
+    }
+  },
+  deleteBrand: async (id) => {
+    set((state) => ({ loading: { ...state.loading, deleting: true }, error: null }));
+    try {
+      await apiCallBrands(`/${id}`, { method: 'DELETE' });
+      set((state) => ({
+        brands: state.brands.filter((b) => b._id !== id && b.id !== id),
+        loading: { ...state.loading, deleting: false },
+      }));
+      return true;
+    } catch (error) {
+      set((state) => ({ error: error.message, loading: { ...state.loading, deleting: false } }));
+      throw error;
+    }
   },
 
   // PRIME CATEGORIES ACTIONS

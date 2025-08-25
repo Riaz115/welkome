@@ -58,6 +58,7 @@ import EcommerceOrderDetails from 'views/admin/main/ecommerce/orderDetails';
 import EcommerceReferrals from 'views/admin/main/ecommerce/referrals';
 
 import CategoryManagement from 'views/admin/main/marketshphere/categoryManagement';
+import BrandsManagement from 'views/admin/main/marketshphere/brandsManagement';
 import ProductManagement from 'views/admin/main/marketshphere/productManagement';
 import ProductSettings from 'views/admin/main/marketshphere/productManagement/productSettings';
 import NewProduct from 'views/admin/main/marketshphere/newProduct';
@@ -332,6 +333,13 @@ const routes = [
             path: '/main/marketsphere/category-management',
             exact: false,
             component: <CategoryManagement />,
+          },
+          {
+            name: 'Brands Management',
+            layout: '/admin',
+            path: '/main/marketsphere/brands-management',
+            exact: false,
+            component: <BrandsManagement />,
           },
           {
             name: 'Product Management',

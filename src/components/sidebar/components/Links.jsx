@@ -80,6 +80,7 @@ export function SidebarLinks(props) {
       items: [
         { name: 'MarketSphere Dashboard', path: '/admin/dashboards/marketsphere' },
         { name: 'Category Management', path: '/admin/main/marketsphere/category-management' },
+        { name: 'Brands Management', path: '/admin/main/marketsphere/brands-management' },
         { name: 'Product Management', path: '/admin/main/marketsphere/product-management' },
         { name: 'Orders', path: '/admin/main/ecommerce/order-details' },
         { name: 'Promotions', path: '/admin/main/ecommerce/referrals' }

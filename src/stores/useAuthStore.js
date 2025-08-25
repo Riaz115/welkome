@@ -1,5 +1,6 @@
 import axios from 'lib/axios';
 import { create } from 'zustand';
+import { toast } from 'react-toastify';
 
 // export const useAuthStore = create((set, get) => ({
 //   user: null,
@@ -80,7 +81,7 @@ export const useAuthStore = create((set) => ({
       navigate('/admin/dashboards/welkome');
     } catch (error) {
       set({ loading: false });
-      alert(error.response?.data?.message || 'Login failed');
+      toast.error(error.response?.data?.message || 'Login failed');
     }
   },
 
