@@ -4,6 +4,7 @@ import axiosInstance from '../lib/axios';
 
 // Utility function for API calls using axios
 const apiCall = async (endpoint, options = {}) => {
+  //catagories end points 
   const url = `/categories${endpoint}`;
 
   try {
