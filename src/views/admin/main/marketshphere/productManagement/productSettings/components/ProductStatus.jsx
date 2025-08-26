@@ -1,6 +1,6 @@
 import React from "react";
 import Card from "components/card";
-import { MdInventory, MdAttachMoney, MdDateRange, MdLocalOffer, MdStar, MdVisibility } from "react-icons/md";
+import { MdInventory, MdDateRange } from "react-icons/md";
 
 const ProductStatus = ({ productData, onUpdate }) => {
   const formatDate = (dateString) => {
@@ -48,149 +48,51 @@ const ProductStatus = ({ productData, onUpdate }) => {
   };
 
   const stockStatus = getStockStatus(productData.stock, productData.lowStockThreshold);
-  const hasDiscount = productData.discountedPrice && productData.discountedPrice < productData.price;
-  const discountPercentage = hasDiscount 
-    ? Math.round(((productData.price - productData.discountedPrice) / productData.price) * 100)
-    : 0;
+  const variants = Array.isArray(productData.variants) ? productData.variants : [];
+  const isMulti = variants.length > 1;
 
   return (
     <Card extra={"w-full mt-3 px-6 py-6"}>
       {/* Header */}
       <div className="w-full px-[8px]">
         <h4 className="text-xl font-bold text-navy-700 dark:text-white">
-          Product Status & Metrics
+          Variants
         </h4>
         <p className="mt-1 text-base text-gray-600">
-          Product status and performance information
+          {isMulti ? 'All available combinations' : 'Single variant product'}
         </p>
       </div>
 
       {/* Status Cards */}
       <div className="mt-[37px] space-y-4">
-        {/* Product Status */}
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
-          <div className="flex items-center gap-3">
-            <MdInventory className="h-6 w-6 text-brand-500" />
-            <div>
-              <p className="text-sm font-bold text-navy-700 dark:text-white">
-                Product Status
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Current product state
-              </p>
-            </div>
-          </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(productData.status)}`}>
-            {productData.status}
-          </span>
-        </div>
-
-        {/* Stock Status */}
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
-          <div className="flex items-center gap-3">
-            <div className={`rounded-lg p-2 ${stockStatus.bgColor}`}>
-              <MdInventory className={`h-5 w-5 ${stockStatus.color}`} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-navy-700 dark:text-white">
-                Inventory Status
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Current stock level
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className={`text-sm font-medium ${stockStatus.color}`}>
-              {stockStatus.text}
-            </span>
-            <p className="text-xs text-gray-600 dark:text-gray-300">
-              {productData.stock} units
-            </p>
-          </div>
-        </div>
-
-        {/* Pricing Information */}
+        {/* Variants List */}
         <div className="rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
-          <div className="mb-3 flex items-center gap-3">
-            <MdAttachMoney className="h-6 w-6 text-brand-500" />
-            <div>
-              <p className="text-sm font-bold text-navy-700 dark:text-white">
-                Pricing Information
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Current pricing structure
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Regular Price:</span>
-              <span className="text-sm font-medium text-navy-700 dark:text-white">
-                {productData.currency} {productData.price}
-              </span>
-            </div>
-            
-            {hasDiscount && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Sale Price:</span>
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                    {productData.currency} {productData.discountedPrice}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Discount:</span>
-                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                    -{discountPercentage}%
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Product Identifiers */}
-        <div className="rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-100 text-brand-600 dark:bg-brand-900/30">
-              <span className="text-xs font-bold">#</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-navy-700 dark:text-white">
-                Product Identifiers
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                SKU and MongoDB ObjectId
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">SKU:</span>
-              <span className="text-sm font-mono font-medium text-navy-700 dark:text-white">
-                {productData.sku}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Product ID:</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-mono font-medium text-navy-700 dark:text-white truncate max-w-[200px]">
-                  {productData.id}
-                </span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(productData.id)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  title="Copy Product ID"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-brand-100 p-2 text-brand-600 dark:bg-brand-900/30">
+                <MdInventory className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-navy-700 dark:text-white">{isMulti ? 'Multi Variant' : 'Single Variant'}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">{isMulti ? `${variants.length} combinations` : 'One configuration'}</p>
               </div>
             </div>
+            {isMulti && (
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                {variants.length} variants
+              </span>
+            )}
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {variants.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">No variants found.</p>
+            )}
+            {variants.map((v, idx) => (
+              <div key={idx} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-white/10">
+                <span className="text-sm text-navy-700 dark:text-white">{v.value || v.name || `Variant #${idx + 1}`}</span>
+                <span className="text-xs text-gray-500">#{idx + 1}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -212,35 +114,37 @@ const ProductStatus = ({ productData, onUpdate }) => {
           </span>
         </div>
 
-        {/* Product Tags */}
-        {productData.tags && productData.tags.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
-            <div className="mb-3 flex items-center gap-3">
-              <MdLocalOffer className="h-6 w-6 text-brand-500" />
-              <div>
-                <p className="text-sm font-bold text-navy-700 dark:text-white">
-                  Product Tags
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-300">
-                  Associated keywords
-                </p>
-              </div>
+        {/* Product Identifiers */}
+        <div className="rounded-xl border border-gray-200 bg-white/0 p-4 dark:!border-white/10">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-100 text-brand-600 dark:bg-brand-900/30">
+              <span className="text-xs font-bold">#</span>
             </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {productData.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
-                >
-                  {tag}
-                </span>
-              ))}
+            <div>
+              <p className="text-sm font-bold text-navy-700 dark:text-white">Product Identifiers</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300">SKU and MongoDB ObjectId</p>
             </div>
           </div>
-        )}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-300">SKU:</span>
+              <span className="text-sm font-mono font-medium text-navy-700 dark:text-white">{productData.sku}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-300">Product ID:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono font-medium text-navy-700 dark:text-white truncate max-w-[200px]">{productData.id}</span>
+                <button onClick={() => navigator.clipboard.writeText(productData.id)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" title="Copy Product ID">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {/* Low Stock Warning */}
+        {/* Stock Status */}
         {productData.stock <= productData.lowStockThreshold && (
           <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-700/50 dark:bg-yellow-900/20">
             <div className="flex items-center gap-3">

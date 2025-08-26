@@ -7,6 +7,8 @@ import Product from "./components/steps/Product";
 import VariantConfiguration from "./components/steps/VariantConfiguration";
 import InventoryPricing from "./components/steps/InventoryPricing";
 import Card from "components/card";
+import useProductApiStore from "stores/useProductApiStore";
+import { toast } from "react-toastify";
 
 const ProductNew = () => {
   const navigate = useNavigate();
@@ -106,7 +108,9 @@ const ProductNew = () => {
     newStep > 0 && newStep <= steps.length && setCurrentStep(newStep);
   };
 
-  const handleFinish = () => {
+  const { createProduct } = useProductApiStore();
+
+  const handleFinish = async () => {
     // Create the product object
     const newProduct = {
       id: Date.now().toString(), // Temporary ID, will be replaced by MongoDB _id
@@ -136,17 +140,33 @@ const ProductNew = () => {
       sizes: productData.sizes
     };
 
-    // For now, just console log the product and navigate back
-    // In a real app, this would send to backend
-    console.log('New product created:', newProduct);
-    
-    // Navigate back to product management with success message
-    navigate('/admin/main/marketsphere/product-management', {
-      state: { 
-        newProduct,
-        message: 'Product created successfully!' 
+    try {
+      console.log('Collected productData (all form inputs):', productData);
+      if (Array.isArray(productData?.variants)) {
+        console.log('Collected variants count:', productData.variants.length);
+        console.table(productData.variants);
       }
-    });
+
+      // Send to backend API
+      const created = await createProduct(productData);
+      console.log('New product created (API response):', created);
+
+      // Toast success with backend message if available
+      const successMessage = created?.message || 'Product created successfully!';
+      toast.success(successMessage);
+
+      // Navigate back to product management with success message
+      navigate('/admin/main/marketsphere/product-management', {
+        state: { 
+          newProduct: created?.data || created,
+          message: successMessage
+        }
+      });
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      const errMsg = error?.response?.data?.message || 'Failed to create product. Please check console for details.';
+      toast.error(errMsg);
+    }
   };
 
   return (

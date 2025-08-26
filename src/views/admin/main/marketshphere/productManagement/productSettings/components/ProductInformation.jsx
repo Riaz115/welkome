@@ -6,12 +6,15 @@ import TextField from "components/fields/TextField";
 const ProductInformation = ({ productData, onUpdate }) => {
   const [formData, setFormData] = useState({
     name: productData.name || '',
+    subtitle: productData.subtitle || '',
+    brand: productData.brand || '',
     description: productData.description || '',
+    primeCategory: typeof productData.primeCategory === 'string' ? productData.primeCategory : '',
+    category: typeof productData.category === 'string' ? productData.category : '',
+    subCategory: productData.subCategory || '',
     weight: productData.weight || '',
     color: productData.color || '',
     collection: productData.collection || '',
-    category: productData.category || '',
-    primeCategory: productData.primeCategory || '',
   });
 
   const handleInputChange = (field, value) => {
@@ -51,6 +54,24 @@ const ProductInformation = ({ productData, onUpdate }) => {
           />
           <InputField
             extra="mb-3"
+            label="Subtitle"
+            placeholder="Short subtitle"
+            id="subtitle"
+            type="text"
+            value={formData.subtitle}
+            onChange={(e) => handleInputChange('subtitle', e.target.value)}
+          />
+          <InputField
+            extra="mb-3"
+            label="Brand"
+            placeholder="Brand name"
+            id="brand"
+            type="text"
+            value={formData.brand}
+            onChange={(e) => handleInputChange('brand', e.target.value)}
+          />
+          <InputField
+            extra="mb-3"
             label="Weight"
             placeholder="e.g., 221g or 2.1kg"
             id="weight"
@@ -79,33 +100,32 @@ const ProductInformation = ({ productData, onUpdate }) => {
             value={formData.collection}
             onChange={(e) => handleInputChange('collection', e.target.value)}
           />
-          
-          <div className="mb-3">
-            <label className="ml-3 text-sm font-bold text-navy-700 dark:text-white">
-              Prime Category
-            </label>
-            <select
-              value={formData.primeCategory}
-              onChange={(e) => handleInputChange('primeCategory', e.target.value)}
-              className="mt-2 flex h-12 w-full items-center justify-center rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white"
-            >
-              <option value="">Select Prime Category</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Home & Garden">Home & Garden</option>
-              <option value="Sports">Sports</option>
-              <option value="Books">Books</option>
-            </select>
-          </div>
-
           <InputField
             extra="mb-3"
-            label="Category"
-            placeholder="e.g., Smartphones"
+            label="Prime Category (text)"
+            placeholder="e.g., riaz prime catagory"
+            id="primeCategory"
+            type="text"
+            value={formData.primeCategory}
+            onChange={(e) => handleInputChange('primeCategory', e.target.value)}
+          />
+          <InputField
+            extra="mb-3"
+            label="Category (text)"
+            placeholder="e.g., first catagory"
             id="category"
             type="text"
             value={formData.category}
             onChange={(e) => handleInputChange('category', e.target.value)}
+          />
+          <InputField
+            extra="mb-3"
+            label="Sub Category (text)"
+            placeholder="e.g., first sub catagory"
+            id="subCategory"
+            type="text"
+            value={formData.subCategory}
+            onChange={(e) => handleInputChange('subCategory', e.target.value)}
           />
         </div>
       </div>

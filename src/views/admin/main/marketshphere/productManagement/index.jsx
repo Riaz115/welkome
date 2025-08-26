@@ -3,6 +3,8 @@ import Card from "components/card";
 import SearchIcon from "components/icons/SearchIcon";
 import { MdChevronRight, MdChevronLeft, MdFilterList, MdExpandMore, MdExpandLess, MdClear } from "react-icons/md";
 import { useLocation, useNavigate } from "react-router-dom";
+import useProductApiStore from "stores/useProductApiStore";
+import { toast } from "react-toastify";
 
 import {
   createColumnHelper,
@@ -17,152 +19,10 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 
-// Mock data for products
-const productsData = [
-  {
-    id: "507f1f77bcf86cd799439011",
-    sku: "ELC-IPH-001",
-    name: "iPhone 15 Pro",
-    description: "Latest iPhone with Pro camera system\nA17 Pro chip for ultimate performance\nTitanium design with Action Button",
-    image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 999,
-    discountedPrice: 899,
-    stock: 25,
-    dateAdded: "2024-01-15",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439012",
-    sku: "ELC-SAM-002",
-    name: "Samsung Galaxy S24",
-    description: "Galaxy AI powered smartphone\n200MP camera with advanced zoom\nOne UI 6.1 with enhanced features",
-    image: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 899,
-    discountedPrice: 799,
-    stock: 18,
-    dateAdded: "2024-01-12",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439013",
-    sku: "ELC-MAC-003",
-    name: "MacBook Pro 16\"",
-    description: "M3 Pro chip for extreme performance\n18-hour battery life\nLiquid Retina XDR display",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop&crop=center",
-    category: "Laptops",
-    primeCategory: "Electronics",
-    price: 2499,
-    discountedPrice: 2299,
-    stock: 12,
-    dateAdded: "2024-01-10",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439014",
-    sku: "ELC-PIX-004",
-    name: "Google Pixel 8 Google Pixel 8 Google Pixel 8 Google Pixel 8 Google Pixel 8 Google Pixel 8Google Pixel 8 Google Pixel 8 Google Pixel 8 Google Pixel 8Google Pixel 8 Google Pixel 8",
-    description: "AI-powered photography features\nTitan M security chip\nPure Android experience",
-    image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 699,
-    discountedPrice: 649,
-    stock: 0,
-    dateAdded: "2024-01-08",
-    status: "Inactive"
-  },
-  {
-    id: "507f1f77bcf86cd799439015",
-    sku: "ELC-DEL-005",
-    name: "Dell XPS 13",
-    description: "Ultra-thin premium laptop\nInfinityEdge display\nIntel 13th gen processors",
-    image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=100&h=100&fit=crop&crop=center",
-    category: "Laptops",
-    primeCategory: "Electronics",
-    price: 1299,
-    discountedPrice: null,
-    stock: 8,
-    dateAdded: "2024-01-05",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439016",
-    sku: "ELC-IPD-006",
-    name: "iPad Pro 12.9\"",
-    description: "M2 chip delivers powerful performance\nLiquid Retina XDR display\nApple Pencil hover experience",
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100&h=100&fit=crop&crop=center",
-    category: "Tablets",
-    primeCategory: "Electronics",
-    price: 1099,
-    discountedPrice: 999,
-    stock: 18,
-    dateAdded: "2024-01-03",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439017",
-    sku: "CLT-COT-007",
-    name: "Cotton T-Shirt",
-    description: "100% organic cotton fabric\nComfortable regular fit\nAvailable in multiple colors",
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&h=100&fit=crop&crop=center",
-    category: "Men's Clothing",
-    primeCategory: "Clothing",
-    price: 29,
-    discountedPrice: 24,
-    stock: 45,
-    dateAdded: "2024-01-01",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439018",
-    sku: "CLT-SUM-008",
-    name: "Summer Dress",
-    description: "Lightweight breathable fabric\nPerfect for summer occasions\nElegant floral print design",
-    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=100&h=100&fit=crop&crop=center",
-    category: "Women's Clothing",
-    primeCategory: "Clothing",
-    price: 79,
-    discountedPrice: 69,
-    stock: 22,
-    dateAdded: "2023-12-28",
-    status: "Active"
-  },
-  {
-    id: "507f1f77bcf86cd799439019",
-    sku: "CLT-KID-009",
-    name: "Kids Sneakers",
-    description: "Durable and comfortable design\nNon-slip rubber sole\nFun colorful patterns",
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100&h=100&fit=crop&crop=center",
-    category: "Kids' Clothing",
-    primeCategory: "Clothing",
-    price: 55,
-    discountedPrice: null,
-    stock: 0,
-    dateAdded: "2023-12-25",
-    status: "Inactive"
-  },
-  {
-    id: "507f1f77bcf86cd799439020",
-    sku: "ELC-HEP-010",
-    name: "Wireless Headphones",
-    description: "Active noise cancellation\n30-hour battery life\nPremium audio quality",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop&crop=center",
-    category: "Audio",
-    primeCategory: "Electronics",
-    price: 199,
-    discountedPrice: 179,
-    stock: 35,
-    dateAdded: "2023-12-20",
-    status: "Active"
-  }
-];
+// using backend only; removed dummy data
 
 function ProductTable(props) {
-  const { tableData, onAddClick, onEditClick, initialFilters, clearFilters } = props;
+  const { tableData, onAddClick, onEditClick, onDeleteClick, initialFilters, clearFilters } = props;
   const [columnFilters, setColumnFilters] = React.useState([]);
   let defaultData = tableData;
   const [globalFilter, setGlobalFilter] = React.useState(initialFilters?.search || "");
@@ -332,8 +192,9 @@ function ProductTable(props) {
         </p>
       ),
       cell: (info) => {
-        const fullId = info.getValue().toString();
-        const truncatedId = fullId.length > 8 ? `${fullId.substring(0, 8)}...` : fullId;
+        const value = info.getValue();
+        const fullId = value != null ? String(value) : '';
+        const truncatedId = fullId.length > 8 ? `${fullId.substring(0, 8)}...` : (fullId || '-');
         
         const copyToClipboard = () => {
           navigator.clipboard.writeText(fullId);
@@ -344,8 +205,8 @@ function ProductTable(props) {
           <div className="flex items-center gap-2">
             <span 
               className="text-sm font-mono text-brand-600 dark:text-brand-400 cursor-pointer hover:text-brand-700 dark:hover:text-brand-300"
-              onClick={copyToClipboard}
-              title={`Full ID: ${fullId} (Click to copy)`}
+              onClick={fullId ? copyToClipboard : undefined}
+              title={fullId ? `Full ID: ${fullId} (Click to copy)` : 'No ID'}
             >
               {truncatedId}
             </span>
@@ -414,13 +275,41 @@ function ProductTable(props) {
       ),
       cell: (info) => (
         <div>
-          <p className="text-sm font-bold text-navy-700 dark:text-white">
-            {info.getValue()}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-300">
-            {info.row.original.primeCategory}
-          </p>
-                          </div>
+          {(() => {
+            const value = info.getValue();
+            const original = info.row.original;
+            const renderPath = (val) => {
+              if (!val) return '';
+              if (typeof val === 'string') return val;
+              if (typeof val === 'object') {
+                const pc = val.primeCategory?.name || val.primeCategory || '';
+                const c = val.category?.name || val.category || '';
+                const sc = val.subCategory?.name || val.subCategory || val.subcategory || '';
+                const parts = [c].filter(Boolean);
+                return parts.join('');
+              }
+              return String(val);
+            };
+            const renderPrime = (val) => {
+              if (!val) return '';
+              if (typeof val === 'string') return val;
+              if (typeof val === 'object') {
+                return val.name || '';
+              }
+              return String(val);
+            };
+            // category title
+            const categoryTitle = renderPath(value) || renderPath(original.category);
+            // primeCategory subtitle
+            const primeSubtitle = renderPrime(original.primeCategory) || (typeof value === 'object' ? renderPrime(value.primeCategory) : '');
+            return (
+              <>
+                <p className="text-sm font-bold text-navy-700 dark:text-white">{categoryTitle || '-'}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-300">{primeSubtitle}</p>
+              </>
+            );
+          })()}
+        </div>
       ),
     }),
     columnHelper.accessor("price", {
@@ -531,11 +420,7 @@ function ProductTable(props) {
                               </svg>
                             </button>
                             <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this product?')) {
-                console.log("Delete product:", info.row.original);
-              }
-            }}
+            onClick={() => onDeleteClick && onDeleteClick(info.row.original)}
                               className="inline-flex items-center justify-center w-8 h-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-150"
                               title="Delete Product"
                             >
@@ -1071,8 +956,79 @@ const ProductManagement = () => {
   const navigate = useNavigate();
   const [currentCategoryContext, setCurrentCategoryContext] = useState(null);
 
-  // Convert productsData to state
-  const [products, setProducts] = useState(productsData);
+  const { products: apiProducts, getAllProducts, deleteProduct, loading } = useProductApiStore();
+  const [products, setProducts] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const getFirstImageUrl = (p) => {
+    if (!p) return '';
+    // New backend shape: media: { coverImage, images: [] }
+    if (p.media) {
+      if (typeof p.media.coverImage === 'string' && p.media.coverImage) return p.media.coverImage;
+      const img0 = Array.isArray(p.media.images) ? p.media.images[0] : null;
+      if (typeof img0 === 'string' && img0) return img0;
+      if (img0 && typeof img0 === 'object') {
+        return img0.url || img0.location || img0.secure_url || img0.path || img0.preview || '';
+      }
+    }
+    if (typeof p.image === 'string' && p.image) return p.image;
+    if (typeof p.coverImage === 'string' && p.coverImage) return p.coverImage;
+    if (typeof p.thumbnail === 'string' && p.thumbnail) return p.thumbnail;
+    const img = Array.isArray(p.images) ? p.images[0] : null;
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    return img.url || img.location || img.secure_url || img.path || img.preview || '';
+  };
+
+  const normalizeProduct = (p) => {
+    const normalizeId = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object' && val.$oid) return val.$oid;
+      return String(val);
+    };
+    const normalizeDate = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object' && val.$date) return val.$date;
+      return String(val);
+    };
+    const basePrice = Number((p.pricing && (p.pricing.basePrice ?? p.pricing.price)) ?? p.price ?? 0) || 0;
+    const discountPercent = Number(p.pricing?.discountPercent ?? 0) || 0;
+    const discountedPrice = discountPercent > 0 ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2)) : null;
+
+    return {
+      id: normalizeId(p._id) || p.id || normalizeId(p.id),
+      sku: p.sku || '',
+      name: p.name || p.title || '',
+      description: p.description || '',
+      image: getFirstImageUrl(p),
+      category: (p.category && (p.category.category || p.category.name)) || p.category || '',
+      primeCategory: (p.category && (p.category.primeCategory || p.category.primeCategory?.name)) || p.primeCategory || '',
+      price: basePrice,
+      discountedPrice,
+      stock: Array.isArray(p.variants) ? p.variants.length : (p.stock || 0),
+      dateAdded: normalizeDate(p.dateAdded || p.createdAt),
+      status: p.status || 'Active',
+    };
+  };
+
+  useEffect(() => {
+    getAllProducts().catch(() => {
+      setProducts([]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep products in sync with API store
+  useEffect(() => {
+    if (Array.isArray(apiProducts) && apiProducts.length >= 0) {
+      const normalized = apiProducts.map(normalizeProduct);
+      setProducts(normalized);
+    }
+  }, [apiProducts]);
 
   // Extract category context from navigation state
   const categoryContext = location.state?.categoryContext;
@@ -1117,15 +1073,38 @@ const ProductManagement = () => {
     navigate('/admin/main/marketsphere/new-product');
   };
 
+  const handleRequestDelete = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteProduct(productToDelete.id);
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+      toast.success('Product deleted successfully');
+    } catch (e) {
+      toast.error(e?.message || 'Failed to delete product');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setProductToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
+  };
+
   // Check for new product from navigation state
   React.useEffect(() => {
     if (location.state?.newProduct) {
-      // Add the new product to the list
-      setProducts(prevProducts => [location.state.newProduct, ...prevProducts]);
-      
-      // Show success message (you can replace this with a toast notification)
+      const normalized = normalizeProduct(location.state.newProduct);
+      setProducts(prevProducts => [normalized, ...prevProducts]);
       if (location.state.message) {
-        console.log(location.state.message);
         // Optional: Clear the state to prevent re-adding on refresh
         window.history.replaceState({}, '', location.pathname);
       }
@@ -1165,9 +1144,45 @@ const ProductManagement = () => {
         tableData={products} 
         onAddClick={handleOpenAddModal}
         onEditClick={handleEditProduct}
+        onDeleteClick={handleRequestDelete}
         initialFilters={initialFilters}
         clearFilters={clearFilters}
       />
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-navy-700">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m-7 0h8l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7h1"/></svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-navy-700 dark:text-white">Delete Product</h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Are you sure you want to delete this product? This action cannot be undone.</p>
+              </div>
+            </div>
+            {productToDelete && (
+              <div className="mb-6 rounded-xl border border-gray-200 p-4 text-sm dark:border-white/10">
+                <div className="font-semibold text-navy-700 dark:text-white">{productToDelete.name || 'Untitled'}</div>
+                <div className="mt-1 text-gray-600 dark:text-gray-300">SKU: {productToDelete.sku || '-'}</div>
+                <div className="text-gray-600 dark:text-gray-300">ID: {productToDelete.id}</div>
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={cancelDelete} disabled={isDeleting} className={`rounded-xl px-5 py-3 text-sm ${isDeleting ? 'cursor-not-allowed opacity-60' : ''} border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-navy-600`}>Cancel</button>
+              <button onClick={confirmDelete} disabled={isDeleting} className={`inline-flex items-center justify-center rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white hover:bg-red-600 ${isDeleting ? 'cursor-not-allowed opacity-80' : ''}`}>
+                {isDeleting && (
+                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                )}
+                {isDeleting ? 'Deleting...' : 'Delete Product'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

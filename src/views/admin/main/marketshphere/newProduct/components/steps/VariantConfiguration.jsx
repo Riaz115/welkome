@@ -37,28 +37,35 @@ const VariantConfiguration = ({ data, onDataChange }) => {
           stock: '',
           barcode: '',
           image: null,
-          variantCombination: {}
+          variantCombination: { Default: 'Default' }
         }]
       });
     }
   }, [data.variantMode, data.variantTypes, data.enableSizeMatrix, data.sizes]);
 
+  const buildCombinationKey = (combination) => {
+    if (!combination || Object.keys(combination).length === 0) return 'DEFAULT';
+    const keys = Object.keys(combination).sort();
+    return keys.map((k) => `${k}=${String(combination[k])}`).join('|');
+  };
+
   const generateVariantMatrix = () => {
+    // If no variant types configured, clear variants
     if (!data.variantTypes || data.variantTypes.length === 0) {
       onDataChange({ variants: [] });
       return;
     }
 
     let combinations = [{}];
-    
+
     // Generate combinations for variant types
-    data.variantTypes.forEach(variantType => {
+    data.variantTypes.forEach((variantType) => {
       const newCombinations = [];
-      combinations.forEach(combination => {
-        variantType.values.forEach(value => {
+      combinations.forEach((combination) => {
+        variantType.values.forEach((value) => {
           newCombinations.push({
             ...combination,
-            [variantType.type]: value
+            [variantType.type]: value,
           });
         });
       });
@@ -68,20 +75,49 @@ const VariantConfiguration = ({ data, onDataChange }) => {
     // If size matrix is enabled, add size combinations
     if (data.enableSizeMatrix && data.sizes.length > 0) {
       const newCombinations = [];
-      combinations.forEach(combination => {
-        data.sizes.forEach(size => {
+      combinations.forEach((combination) => {
+        data.sizes.forEach((size) => {
           newCombinations.push({
             ...combination,
-            Size: size
+            Size: size,
           });
         });
       });
       combinations = newCombinations;
     }
 
-    // Generate variant objects
+    // Preserve existing variant details by matching on combination signature
+    const existingByKey = {};
+    (data.variants || []).forEach((v) => {
+      const key = buildCombinationKey(v.variantCombination);
+      existingByKey[key] = v;
+    });
+
     const variants = combinations.map((combination, index) => {
       const variantName = Object.values(combination).join(' / ');
+      const key = buildCombinationKey(combination);
+      const existing = existingByKey[key];
+
+      if (existing) {
+        // Merge existing values to avoid losing user input
+        return {
+          ...existing,
+          id: existing.id ?? index + 1,
+          name: variantName,
+          variantCombination: combination,
+          // Ensure fields exist for controlled inputs
+          sku: existing.sku ?? '',
+          mrp: existing.mrp ?? '',
+          discount: existing.discount ?? '',
+          discountedPrice: existing.discountedPrice ?? '',
+          finalPrice: existing.finalPrice ?? '',
+          stock: existing.stock ?? '',
+          barcode: existing.barcode ?? '',
+          image: existing.image ?? null,
+        };
+      }
+
+      // New variant default structure
       return {
         id: index + 1,
         name: variantName,
@@ -93,7 +129,7 @@ const VariantConfiguration = ({ data, onDataChange }) => {
         stock: '',
         barcode: '',
         image: null,
-        variantCombination: combination
+        variantCombination: combination,
       };
     });
 

@@ -5,8 +5,8 @@ import { MdAdd, MdClose } from "react-icons/md";
 
 const ProductPricing = ({ productData, onUpdate }) => {
   const [formData, setFormData] = useState({
-    price: productData.price || '',
-    discountedPrice: productData.discountedPrice || '',
+    basePrice: productData.price || 0,
+    discountPercent: productData.discountPercent || 0,
     currency: productData.currency || 'USD',
     sku: productData.sku || '',
     stock: productData.stock || 0,
@@ -41,7 +41,15 @@ const ProductPricing = ({ productData, onUpdate }) => {
   };
 
   const handleSave = () => {
-    onUpdate(formData);
+    onUpdate({
+      price: formData.basePrice,
+      discountPercent: formData.discountPercent,
+      currency: formData.currency,
+      sku: formData.sku,
+      stock: formData.stock,
+      lowStockThreshold: formData.lowStockThreshold,
+      tags: formData.tags,
+    });
   };
 
   return (
@@ -64,23 +72,26 @@ const ProductPricing = ({ productData, onUpdate }) => {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <InputField
             extra="mb-3"
-            label="Regular Price"
+            label="Base Price"
             placeholder="e.g., 999"
-            id="price"
+            id="basePrice"
             type="number"
-            value={formData.price}
-            onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || '')}
+            value={formData.basePrice}
+            onChange={(e) => handleInputChange('basePrice', parseFloat(e.target.value) || 0)}
           />
           <InputField
             extra="mb-3"
-            label="Discounted Price"
-            placeholder="e.g., 899"
-            id="discountedPrice"
+            label="Discount Percent (%)"
+            placeholder="e.g., 10"
+            id="discountPercent"
             type="number"
-            value={formData.discountedPrice}
-            onChange={(e) => handleInputChange('discountedPrice', parseFloat(e.target.value) || '')}
+            value={formData.discountPercent}
+            onChange={(e) => handleInputChange('discountPercent', parseFloat(e.target.value) || 0)}
           />
         </div>
+        <p className="text-xs text-gray-600">
+          Final price: {formData.discountPercent > 0 ? `$${(Number(formData.basePrice||0)*(1-Number(formData.discountPercent||0)/100)).toFixed(2)}` : `$${Number(formData.basePrice||0).toFixed(2)}`}
+        </p>
         
         <div className="mb-3">
           <label className="ml-3 text-sm font-bold text-navy-700 dark:text-white">

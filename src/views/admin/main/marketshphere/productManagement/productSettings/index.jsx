@@ -1,137 +1,121 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+// Reuse the New Product step UI for editing
 import ProductBanner from "./components/ProductBanner";
 import ProductInformation from "./components/ProductInformation";
 import ProductPricing from "./components/ProductPricing";
 import ProductStatus from "./components/ProductStatus";
-
-// Using the same productsData from ProductManagement
-const productsData = [
-  {
-    id: "507f1f77bcf86cd799439011",
-    sku: "ELC-IPH-001",
-    name: "iPhone 15 Pro",
-    description: "Latest iPhone with Pro camera system\nA17 Pro chip for ultimate performance\nTitanium design with Action Button",
-    image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 999,
-    discountedPrice: 899,
-    stock: 25,
-    dateAdded: "2024-01-15",
-    status: "Active",
-    weight: "221g",
-    color: "Natural Titanium",
-    collection: "iPhone 15 Series",
-    currency: "USD",
-    uniqueCode: "IPH15PRO001",
-    tags: ["smartphone", "apple", "titanium", "pro"],
-    isActive: true,
-    isFeatured: false,
-    lowStockThreshold: 10
-  },
-  {
-    id: "507f1f77bcf86cd799439012",
-    sku: "ELC-SAM-002",
-    name: "Samsung Galaxy S24",
-    description: "Galaxy AI powered smartphone\n200MP camera with advanced zoom\nOne UI 6.1 with enhanced features",
-    image: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 899,
-    discountedPrice: 799,
-    stock: 18,
-    dateAdded: "2024-01-12",
-    status: "Active",
-    weight: "168g",
-    color: "Phantom Black",
-    collection: "Galaxy S24 Series",
-    currency: "USD",
-    uniqueCode: "SAMS24002",
-    tags: ["smartphone", "samsung", "galaxy", "ai"],
-    isActive: true,
-    isFeatured: true,
-    lowStockThreshold: 15
-  },
-  {
-    id: "507f1f77bcf86cd799439013",
-    sku: "ELC-MAC-003",
-    name: "MacBook Pro 16\"",
-    description: "M3 Pro chip for extreme performance\n18-hour battery life\nLiquid Retina XDR display",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop&crop=center",
-    category: "Laptops",
-    primeCategory: "Electronics",
-    price: 2499,
-    discountedPrice: 2299,
-    stock: 12,
-    dateAdded: "2024-01-10",
-    status: "Active",
-    weight: "2.1kg",
-    color: "Space Gray",
-    collection: "MacBook Pro Series",
-    currency: "USD",
-    uniqueCode: "MBP16M3003",
-    tags: ["laptop", "apple", "macbook", "m3"],
-    isActive: true,
-    isFeatured: true,
-    lowStockThreshold: 5
-  },
-  {
-    id: "507f1f77bcf86cd799439014",
-    sku: "ELC-PIX-004",
-    name: "Google Pixel 8",
-    description: "AI-powered photography features\nTitan M security chip\nPure Android experience",
-    image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=100&h=100&fit=crop&crop=center",
-    category: "Smartphones",
-    primeCategory: "Electronics",
-    price: 699,
-    discountedPrice: 649,
-    stock: 0,
-    dateAdded: "2024-01-08",
-    status: "Inactive",
-    weight: "187g",
-    color: "Obsidian",
-    collection: "Pixel 8 Series",
-    currency: "USD",
-    uniqueCode: "PIX8004",
-    tags: ["smartphone", "google", "pixel", "android"],
-    isActive: false,
-    isFeatured: false,
-    lowStockThreshold: 10
-  }
-];
+import useProductApiStore from "stores/useProductApiStore";
 
 const ProductSettings = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { getProductById, updateProduct } = useProductApiStore();
   const [productData, setProductData] = useState(null);
+  // Using original page design components fed by normalized productData
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Find product by ID from the products data
-    const product = productsData.find(p => p.id === id);
-    if (product) {
-      setProductData(product);
-    } else {
-      // If product not found, redirect back to product management
-      navigate('/admin/main/marketsphere/product-management');
+  const getFirstImageUrl = (p) => {
+    if (!p) return "";
+    if (p.media) {
+      if (typeof p.media.coverImage === "string" && p.media.coverImage) return p.media.coverImage;
+      const img0 = Array.isArray(p.media.images) ? p.media.images[0] : null;
+      if (typeof img0 === "string" && img0) return img0;
+      if (img0 && typeof img0 === "object") {
+        return img0.url || img0.location || img0.secure_url || img0.path || img0.preview || "";
+      }
     }
-  }, [id, navigate]);
-
-  const handleProductUpdate = (updatedData) => {
-    console.log('Updating product:', updatedData);
-    setProductData(prevData => ({
-      ...prevData,
-      ...updatedData
-    }));
-    
-    // Here you would normally make an API call to update the product
-    // Example: await updateProduct(id, updatedData);
-    
-    // Show success message (you could add a toast notification here)
-    alert('Product updated successfully!');
+    if (typeof p.image === "string" && p.image) return p.image;
+    if (typeof p.coverImage === "string" && p.coverImage) return p.coverImage;
+    if (typeof p.thumbnail === "string" && p.thumbnail) return p.thumbnail;
+    const img = Array.isArray(p.images) ? p.images[0] : null;
+    if (!img) return "";
+    if (typeof img === "string") return img;
+    return img.url || img.location || img.secure_url || img.path || img.preview || "";
   };
 
-  if (!productData) {
+  const normalizeProduct = (p) => {
+    const normalizeId = (val) => {
+      if (!val) return "";
+      if (typeof val === "string") return val;
+      if (typeof val === "object" && val.$oid) return val.$oid;
+      return String(val);
+    };
+    const normalizeDate = (val) => {
+      if (!val) return "";
+      if (typeof val === "string") return val;
+      if (typeof val === "object" && val.$date) return val.$date;
+      return String(val);
+    };
+    const basePrice = Number(
+      (p.pricing && (p.pricing.basePrice ?? p.pricing.price)) ?? p.price ?? 0
+    ) || 0;
+    const discountPercent = Number(p.pricing?.discountPercent ?? 0) || 0;
+    const computedDiscounted = discountPercent > 0
+      ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2))
+      : null;
+
+    return {
+      id: normalizeId(p._id) || p.id || normalizeId(p.id),
+      sku: p.sku || "",
+      name: p.name || p.title || "",
+      description: p.description || "",
+      image: getFirstImageUrl(p),
+      category: (p.category && (p.category.category || p.category.name)) || p.category || "",
+      primeCategory: (p.category && (p.category.primeCategory || p.category.primeCategory?.name)) || p.primeCategory || "",
+      price: basePrice,
+      discountPercent,
+      discountedPrice: computedDiscounted,
+      stock: Array.isArray(p.variants) ? p.variants.length : (p.stock || 0),
+      dateAdded: normalizeDate(p.dateAdded || p.createdAt),
+      status: p.status || "Active",
+      variants: Array.isArray(p.variants) ? p.variants : [],
+      // Optional fields used by forms
+      weight: p.weight || "",
+      color: p.color || "",
+      collection: p.collection || "",
+      currency: p.currency || "USD",
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      lowStockThreshold: p.lowStockThreshold || 10,
+    };
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getProductById(id);
+        const data = res?.data || res;
+        if (data && isMounted) {
+          setProductData(normalizeProduct(data));
+        } else if (isMounted) {
+          navigate('/admin/main/marketsphere/product-management');
+        }
+      } catch (e) {
+        navigate('/admin/main/marketsphere/product-management');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [id, getProductById, navigate]);
+
+  const handleProductUpdate = async (updatedData) => {
+    try {
+      const payload = { ...updatedData };
+      await updateProduct(id, payload);
+      setProductData(prevData => ({
+        ...prevData,
+        ...updatedData
+      }));
+      alert('Product updated successfully!');
+    } catch (e) {
+      alert('Failed to update product');
+    }
+  };
+
+  if (loading) {
     return (
       <div className="mt-3 flex h-full w-full items-center justify-center">
         <div className="text-xl font-medium text-navy-700 dark:text-white">
@@ -140,6 +124,8 @@ const ProductSettings = () => {
       </div>
     );
   }
+
+  if (!productData) return null;
 
   return (
     <div className="mt-3 grid h-full w-full grid-cols-1 gap-5 lg:grid-cols-2">
@@ -163,4 +149,4 @@ const ProductSettings = () => {
   );
 };
 
-export default ProductSettings; 
+export default ProductSettings;

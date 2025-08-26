@@ -1,14 +1,22 @@
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 export default function StepperControl({ handleClick, currentStep, steps, onFinish, productData, canProceed }) {
   const isLastStep = currentStep === steps.length;
+  const [submitting, setSubmitting] = useState(false);
   
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastStep) {
       // Validate required fields before finishing
       if (!productData.title || productData.variants.length === 0) {
-        alert('Please fill in all required fields (Product Title and at least one variant with pricing)');
+        toast.error('Please fill required fields: title and at least one priced variant');
         return;
       }
-      onFinish();
+      try {
+        setSubmitting(true);
+        await onFinish();
+      } finally {
+        setSubmitting(false);
+      }
     } else {
       if (canProceed) {
         handleClick("next");
@@ -17,15 +25,15 @@ export default function StepperControl({ handleClick, currentStep, steps, onFini
         let message = '';
         switch (currentStep) {
           case 1:
-            message = 'Please fill in Product Title and complete the Category Path (Prime Category > Category > Subcategory)';
+            message = 'Fill Product Title and full Category Path (Prime > Category > Subcategory)';
             break;
           case 2:
-            message = 'Please configure at least one variant type with values';
+            message = 'Configure at least one variant type with values';
             break;
           default:
             message = 'Please complete all required fields';
         }
-        alert(message);
+        toast.error(message);
       }
     }
   };
@@ -50,13 +58,13 @@ export default function StepperControl({ handleClick, currentStep, steps, onFini
       <button
         onClick={handleNext}
         className={`cursor-pointer rounded-xl px-16 py-2 font-medium text-white transition duration-200 md:ml-2 ${
-          canProceed || isLastStep 
+          (canProceed || isLastStep) && !submitting
             ? 'bg-brand-900 hover:bg-brand-800 active:bg-brand-700 dark:bg-brand-400 dark:hover:bg-brand-300 dark:active:opacity-90' 
             : 'bg-gray-400 cursor-not-allowed dark:bg-gray-600'
         }`}
-        disabled={!canProceed && !isLastStep}
+        disabled={submitting || (!canProceed && !isLastStep)}
       >
-        {isLastStep ? "Create Product" : "Next"}
+        {isLastStep ? (submitting ? "Adding..." : "Create Product") : "Next"}
       </button>
     </div>
   );
