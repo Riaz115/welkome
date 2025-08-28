@@ -1,84 +1,27 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-// Reuse the New Product step UI for editing
-import ProductBanner from "./components/ProductBanner";
-import ProductInformation from "./components/ProductInformation";
-import ProductPricing from "./components/ProductPricing";
-import ProductStatus from "./components/ProductStatus";
+import Stepper from "../../../ecommerce/newProduct/components/Stepper";
+import StepperControl from "../../../ecommerce/newProduct/components/StepperControl";
+import { UseContextProvider } from "../../../ecommerce/newProduct/contexts/StepperContext";
+import ProductUpdate from "./components/steps/ProductUpdate";
+import VariantConfiguration from "./components/steps/VariantConfiguration";
+import InventoryPricing from "./components/steps/InventoryPricing";
+import Card from "components/card";
 import useProductApiStore from "stores/useProductApiStore";
 
 const ProductSettings = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getProductById, updateProduct } = useProductApiStore();
+  const [currentStep, setCurrentStep] = useState(1);
   const [productData, setProductData] = useState(null);
-  // Using original page design components fed by normalized productData
   const [loading, setLoading] = useState(true);
 
-  const getFirstImageUrl = (p) => {
-    if (!p) return "";
-    if (p.media) {
-      if (typeof p.media.coverImage === "string" && p.media.coverImage) return p.media.coverImage;
-      const img0 = Array.isArray(p.media.images) ? p.media.images[0] : null;
-      if (typeof img0 === "string" && img0) return img0;
-      if (img0 && typeof img0 === "object") {
-        return img0.url || img0.location || img0.secure_url || img0.path || img0.preview || "";
-      }
-    }
-    if (typeof p.image === "string" && p.image) return p.image;
-    if (typeof p.coverImage === "string" && p.coverImage) return p.coverImage;
-    if (typeof p.thumbnail === "string" && p.thumbnail) return p.thumbnail;
-    const img = Array.isArray(p.images) ? p.images[0] : null;
-    if (!img) return "";
-    if (typeof img === "string") return img;
-    return img.url || img.location || img.secure_url || img.path || img.preview || "";
-  };
-
-  const normalizeProduct = (p) => {
-    const normalizeId = (val) => {
-      if (!val) return "";
-      if (typeof val === "string") return val;
-      if (typeof val === "object" && val.$oid) return val.$oid;
-      return String(val);
-    };
-    const normalizeDate = (val) => {
-      if (!val) return "";
-      if (typeof val === "string") return val;
-      if (typeof val === "object" && val.$date) return val.$date;
-      return String(val);
-    };
-    const basePrice = Number(
-      (p.pricing && (p.pricing.basePrice ?? p.pricing.price)) ?? p.price ?? 0
-    ) || 0;
-    const discountPercent = Number(p.pricing?.discountPercent ?? 0) || 0;
-    const computedDiscounted = discountPercent > 0
-      ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2))
-      : null;
-
-    return {
-      id: normalizeId(p._id) || p.id || normalizeId(p.id),
-      sku: p.sku || "",
-      name: p.name || p.title || "",
-      description: p.description || "",
-      image: getFirstImageUrl(p),
-      category: (p.category && (p.category.category || p.category.name)) || p.category || "",
-      primeCategory: (p.category && (p.category.primeCategory || p.category.primeCategory?.name)) || p.primeCategory || "",
-      price: basePrice,
-      discountPercent,
-      discountedPrice: computedDiscounted,
-      stock: Array.isArray(p.variants) ? p.variants.length : (p.stock || 0),
-      dateAdded: normalizeDate(p.dateAdded || p.createdAt),
-      status: p.status || "Active",
-      variants: Array.isArray(p.variants) ? p.variants : [],
-      // Optional fields used by forms
-      weight: p.weight || "",
-      color: p.color || "",
-      collection: p.collection || "",
-      currency: p.currency || "USD",
-      tags: Array.isArray(p.tags) ? p.tags : [],
-      lowStockThreshold: p.lowStockThreshold || 10,
-    };
-  };
+  const steps = [
+    { stepNo: 1, name: "Product Details" },
+    { stepNo: 2, name: "Variant Configuration" },
+    { stepNo: 3, name: "Inventory & Pricing" },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -88,7 +31,82 @@ const ProductSettings = () => {
         const res = await getProductById(id);
         const data = res?.data || res;
         if (data && isMounted) {
-          setProductData(normalizeProduct(data));
+          // Transform the data to match our form structure
+          const transformedData = {
+            // Basic product details
+            title: data.name || '',
+            subtitle: data.subtitle || '',
+            brand: data.brand || '',
+            brandId: data.brand || '',
+            primeCategory: data.category?.primeCategory || '',
+            primeCategoryId: '',
+            category: data.category?.category || '',
+            categoryId: '',
+            subcategory: data.category?.subCategory || '',
+            subcategoryId: '',
+            description: data.description || '',
+            images: data.media?.images || [],
+            coverImage: data.media?.coverImage || '',
+            video: data.media?.videos?.[0] || '',
+            tags: [],
+            seoSlug: data.name?.toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim('-') || '',
+            visibility: 'public',
+            
+
+            variantMode: data.variants && data.variants.length > 0 ? 'multi' : 'single',
+            variantTypes: data.variants ? [
+              {
+                type: 'Variant',
+                values: data.variants.filter(v => v.name === 'Variant').map(v => v.value)
+              }
+            ] : [],
+            enableSizeMatrix: false,
+            sizes: [],
+            
+
+            variants: data.variants ? data.variants.map((variant, index) => ({
+              id: index + 1,
+              name: variant.value,
+              sku: variant.name === 'SKU' ? variant.value : '',
+              mrp: data.pricing?.basePrice || '',
+              discount: data.pricing?.discountPercent || '',
+              discountedPrice: data.pricing?.basePrice || '',
+              finalPrice: data.pricing?.basePrice || '',
+              stock: '',
+              barcode: '',
+              image: null,
+              variantCombination: { Variant: variant.value }
+            })) : [{
+              id: 1,
+              name: 'Default',
+              sku: data.sku || '',
+              mrp: data.pricing?.basePrice || '',
+              discount: data.pricing?.discountPercent || '',
+              discountedPrice: data.pricing?.basePrice || '',
+              finalPrice: data.pricing?.basePrice || '',
+              stock: '',
+              barcode: '',
+              image: null,
+              variantCombination: { Default: 'Default' }
+            }],
+            
+
+            name: data.name || '',
+            weight: '',
+            color: '',
+            collection: '',
+            videos: data.media?.videos || [],
+            price: data.pricing?.basePrice || '',
+            currency: 'usd',
+            sku: data.sku || '',
+            mrp: data.pricing?.basePrice || '',
+            discount: data.pricing?.discountPercent || '',
+            discountedPrice: data.pricing?.basePrice || '',
+            finalPrice: data.pricing?.basePrice || '',
+            stock: '',
+            barcode: ''
+          };
+          setProductData(transformedData);
         } else if (isMounted) {
           navigate('/admin/main/marketsphere/product-management');
         }
@@ -101,18 +119,31 @@ const ProductSettings = () => {
     return () => { isMounted = false; };
   }, [id, getProductById, navigate]);
 
-  const handleProductUpdate = async (updatedData) => {
-    try {
-      const payload = { ...updatedData };
-      await updateProduct(id, payload);
-      setProductData(prevData => ({
-        ...prevData,
-        ...updatedData
-      }));
-      alert('Product updated successfully!');
-    } catch (e) {
-      alert('Failed to update product');
+  const handleDataChange = (changes) => {
+    setProductData(prev => ({
+      ...prev,
+      ...changes
+    }));
+  };
+
+  const displayStep = (step) => {
+    switch (step.stepNo) {
+      case 1:
+        return <ProductUpdate productData={productData} onDataChange={handleDataChange} />;
+      case 2:
+        return <VariantConfiguration productData={productData} onDataChange={handleDataChange} />;
+      case 3:
+        return <InventoryPricing productData={productData} onDataChange={handleDataChange} />;
+      default:
     }
+  };
+
+  const handleClick = (direction) => {
+    let newStep = currentStep;
+
+    direction === "next" ? newStep++ : newStep--;
+    // check if steps are within bounds
+    newStep > 0 && newStep <= steps.length && setCurrentStep(newStep);
   };
 
   if (loading) {
@@ -128,22 +159,29 @@ const ProductSettings = () => {
   if (!productData) return null;
 
   return (
-    <div className="mt-3 grid h-full w-full grid-cols-1 gap-5 lg:grid-cols-2">
-      <div className="rounded-[20px]">
-        <div>
-          <ProductBanner productData={productData} onUpdate={handleProductUpdate} />
+    <div className="mt-3 h-full w-full">
+      <div className="h-[350px] w-full rounded-[20px] bg-gradient-to-br from-brand-400 to-brand-600 md:h-[390px]" />
+      <div className="w-md:2/3 mx-auto h-full w-5/6 md:px-3  3xl:w-7/12">
+        <div className="-mt-[280px] w-full pb-10 md:-mt-[240px] md:px-[70px]">
+          <Stepper
+            action={setCurrentStep}
+            steps={steps}
+            currentStep={currentStep}
+          />
         </div>
-        <div className="mt-3">
-          <ProductInformation productData={productData} onUpdate={handleProductUpdate} />
-        </div>
-      </div>
-      <div className="">
-        <div>
-          <ProductPricing productData={productData} onUpdate={handleProductUpdate} />
-        </div>
-        <div>
-          <ProductStatus productData={productData} onUpdate={handleProductUpdate} />
-        </div>
+        <Card extra={"h-full mx-auto pb-3"}>
+          <div className="rounded-[20px]">
+            <UseContextProvider>
+              {displayStep(steps[currentStep - 1])}
+            </UseContextProvider>
+          </div>
+          {/* navigation button */}
+          <StepperControl
+            handleClick={handleClick}
+            currentStep={currentStep}
+            steps={steps}
+          />
+        </Card>
       </div>
     </div>
   );
