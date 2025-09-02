@@ -19,29 +19,56 @@ const VariantConfiguration = ({ data, onDataChange }) => {
     { name: 'Pattern', icon: '🎭' },
   ];
 
-  // Generate variant matrix when variant configuration changes
-  useEffect(() => {
-    if (data.variantMode === 'multi' && data.variantTypes.length > 0) {
-      generateVariantMatrix();
-    } else if (data.variantMode === 'single') {
-      // Create a single default variant
-      onDataChange({
-        variants: [{
-          id: 1,
-          name: 'Default',
-          sku: '',
-          mrp: '',
-          discount: '',
-          discountedPrice: '',
-          finalPrice: '',
-          stock: '',
-          barcode: '',
-          image: null,
-          variantCombination: { Default: 'Default' }
-        }]
-      });
-    }
-  }, [data.variantMode, data.variantTypes, data.enableSizeMatrix, data.sizes]);
+     // Generate variant matrix when variant configuration changes
+   useEffect(() => {
+     if (data.variantMode === 'multi' && data.variantSizes) {
+       generateVariantMatrixFromSizes();
+     } else if (data.variantMode === 'single') {
+                if (data.enableSizeMatrix && data.sizes.length > 0) {
+           // Create size-based variants for single variant
+           const variants = data.sizes.map((size, index) => {
+             return {
+               id: index + 1,
+               name: `Default - ${size}`,
+               variantType: 'Default',
+               variantValue: 'Default',
+               size: size,
+               sku: '',
+               mrp: '',
+               discount: '',
+               discountedPrice: '',
+               finalPrice: '',
+               stock: '',
+               barcode: '',
+               images: [],
+               variantCombination: { Default: 'Default', Size: size }
+             };
+           });
+           onDataChange({ variants });
+         } else {
+           // Create a single default variant
+           onDataChange({
+             variants: [{
+               id: 1,
+               name: 'Default',
+               variantType: 'Default',
+               variantValue: 'Default',
+               size: '',
+               sku: '',
+               mrp: '',
+               discount: '',
+               discountedPrice: '',
+               finalPrice: '',
+               stock: '',
+               barcode: '',
+               images: [],
+               variantCombination: { Default: 'Default' }
+             }]
+           });
+         }
+     }
+     
+   }, [data.variantMode, data.variantSizes, data.enableSizeMatrix, data.sizes]);
 
   const buildCombinationKey = (combination) => {
     if (!combination || Object.keys(combination).length === 0) return 'DEFAULT';
@@ -49,131 +76,68 @@ const VariantConfiguration = ({ data, onDataChange }) => {
     return keys.map((k) => `${k}=${String(combination[k])}`).join('|');
   };
 
-  const generateVariantMatrix = () => {
-    // If no variant types configured, clear variants
-    if (!data.variantTypes || data.variantTypes.length === 0) {
-      onDataChange({ variants: [] });
-      return;
-    }
 
-    let combinations = [{}];
 
-    // Generate combinations for variant types
-    data.variantTypes.forEach((variantType) => {
-      const newCombinations = [];
-      combinations.forEach((combination) => {
-        variantType.values.forEach((value) => {
-          newCombinations.push({
-            ...combination,
-            [variantType.type]: value,
-          });
+           const generateVariantMatrixFromSizes = () => {
+        if (!data.variantSizes || Object.keys(data.variantSizes).length === 0) {
+          onDataChange({ variants: [] });
+          return;
+        }
+        
+        const variants = [];
+        let id = 1;
+        
+        Object.entries(data.variantSizes).forEach(([key, sizes]) => {
+          // Skip image keys (they end with _images)
+          if (key.endsWith('_images')) return;
+          
+          const [variantType, variantValue] = key.split('_');
+          
+          if (sizes && sizes.length > 0) {
+            // Create variants with sizes
+            sizes.forEach((size) => {
+              variants.push({
+                id: id++,
+                name: `${variantType}: ${variantValue} - ${size}`,
+                variantType: variantType,
+                variantValue: variantValue,
+                size: size,
+                sku: '',
+                mrp: '',
+                discount: '',
+                discountedPrice: '',
+                finalPrice: '',
+                stock: '',
+                barcode: '',
+                images: [],
+                variantCombination: { [variantType]: variantValue, Size: size }
+              });
+            });
+          } else {
+            // Create variants without sizes (when sizes array is empty or undefined)
+            variants.push({
+              id: id++,
+              name: `${variantType}: ${variantValue}`,
+              variantType: variantType,
+              variantValue: variantValue,
+              size: '',
+              sku: '',
+              mrp: '',
+              discount: '',
+              discountedPrice: '',
+              finalPrice: '',
+              stock: '',
+              barcode: '',
+              images: [],
+              variantCombination: { [variantType]: variantValue }
+            });
+          }
         });
-      });
-      combinations = newCombinations;
-    });
-
-    // If size matrix is enabled, add size combinations
-    if (data.enableSizeMatrix && data.sizes.length > 0) {
-      const newCombinations = [];
-      combinations.forEach((combination) => {
-        data.sizes.forEach((size) => {
-          newCombinations.push({
-            ...combination,
-            Size: size,
-          });
-        });
-      });
-      combinations = newCombinations;
-    }
-
-    // Preserve existing variant details by matching on combination signature
-    const existingByKey = {};
-    (data.variants || []).forEach((v) => {
-      const key = buildCombinationKey(v.variantCombination);
-      existingByKey[key] = v;
-    });
-
-    const variants = combinations.map((combination, index) => {
-      const variantName = Object.values(combination).join(' / ');
-      const key = buildCombinationKey(combination);
-      const existing = existingByKey[key];
-
-      if (existing) {
-        // Merge existing values to avoid losing user input
-        return {
-          ...existing,
-          id: existing.id ?? index + 1,
-          name: variantName,
-          variantCombination: combination,
-          // Ensure fields exist for controlled inputs
-          sku: existing.sku ?? '',
-          mrp: existing.mrp ?? '',
-          discount: existing.discount ?? '',
-          discountedPrice: existing.discountedPrice ?? '',
-          finalPrice: existing.finalPrice ?? '',
-          stock: existing.stock ?? '',
-          barcode: existing.barcode ?? '',
-          image: existing.image ?? null,
-        };
-      }
-
-      // New variant default structure
-      return {
-        id: index + 1,
-        name: variantName,
-        sku: '',
-        mrp: '',
-        discount: '',
-        discountedPrice: '',
-        finalPrice: '',
-        stock: '',
-        barcode: '',
-        image: null,
-        variantCombination: combination,
+        
+        onDataChange({ variants });
       };
-    });
 
-    onDataChange({ variants });
-  };
 
-  const handleVariantModeChange = (mode) => {
-    onDataChange({ 
-      variantMode: mode,
-      variantTypes: mode === 'single' ? [] : data.variantTypes,
-      enableSizeMatrix: mode === 'single' ? false : data.enableSizeMatrix,
-      sizes: mode === 'single' ? [] : data.sizes
-    });
-    setShowVariantBuilder(mode === 'multi');
-  };
-
-  const addVariantType = (typeName) => {
-    if (typeName.trim() && !data.variantTypes.some(vt => vt.type === typeName.trim())) {
-      const newVariantTypes = [...(data.variantTypes || []), { type: typeName.trim(), values: [] }];
-      onDataChange({ variantTypes: newVariantTypes });
-      setNewVariantType('');
-    }
-  };
-
-  const removeVariantType = (index) => {
-    const newVariantTypes = data.variantTypes.filter((_, i) => i !== index);
-    onDataChange({ variantTypes: newVariantTypes });
-  };
-
-  const addVariantValue = (typeIndex, value) => {
-    if (value.trim() && !data.variantTypes[typeIndex].values.includes(value.trim())) {
-      const newVariantTypes = [...data.variantTypes];
-      newVariantTypes[typeIndex].values.push(value.trim());
-      onDataChange({ variantTypes: newVariantTypes });
-      setNewVariantValue('');
-      setSelectedVariantTypeIndex(null);
-    }
-  };
-
-  const removeVariantValue = (typeIndex, valueIndex) => {
-    const newVariantTypes = [...data.variantTypes];
-    newVariantTypes[typeIndex].values.splice(valueIndex, 1);
-    onDataChange({ variantTypes: newVariantTypes });
-  };
 
   const handleSizeMatrixToggle = (enabled) => {
     onDataChange({ 
@@ -202,165 +166,957 @@ const VariantConfiguration = ({ data, onDataChange }) => {
       </h4>
 
       <div className="mt-6 space-y-6">
-        {/* Variant Mode Selector */}
-        <Card extra="p-5">
-          <h6 className="mb-4 text-lg font-bold text-navy-700 dark:text-white">
-            Product Variant Mode
-          </h6>
-          
-          {/* Segmented Control */}
-          <div className="flex w-full rounded-xl bg-gray-100 p-1 dark:bg-navy-800">
-            {[
-              { value: 'single', label: 'Single Variant', desc: 'One product configuration' },
-              { value: 'multi', label: 'Multi Variant', desc: 'Multiple configurations (colors, sizes, etc.)' }
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleVariantModeChange(option.value)}
-                className={`flex-1 rounded-lg p-3 text-center transition-all ${
-                  data.variantMode === option.value
-                    ? 'bg-white text-navy-700 shadow-md dark:bg-navy-700 dark:text-white'
-                    : 'text-gray-600 hover:text-navy-700 dark:text-gray-400 dark:hover:text-white'
-                }`}
-              >
-                <div className="text-sm font-bold">{option.label}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{option.desc}</div>
-              </button>
-            ))}
-          </div>
-        </Card>
+
+        {/* Current Mode Display */}
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-navy-700 rounded-lg">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-semibold">Current Mode:</span> {data.variantMode === 'single' ? 'Single Variant' : 'Multi Variant'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {data.variantMode === 'single' 
+              ? 'Configure single product with optional size variations' 
+              : 'Configure multiple variant types and their combinations'
+            }
+          </p>
+        </div>
 
         {/* Multi Variant Configuration */}
         {data.variantMode === 'multi' && (
           <Card extra="p-5">
             <div className="flex items-center justify-between mb-4">
               <h6 className="text-lg font-bold text-navy-700 dark:text-white">
-                Variant Builder
+                Multi Variant Configuration
               </h6>
               <div className="text-sm text-gray-600">
-                {(data.variantTypes || []).length} variant type(s) configured
+                Configure variant types and their size combinations
               </div>
             </div>
 
-            {/* Add Variant Type */}
-            <div className="mb-6">
-              <label className="mb-2 text-sm font-bold text-navy-700 dark:text-white">
-                Add Variant Type
-              </label>
-              
-              {/* Predefined Types */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-                {predefinedVariantTypes.map((type, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addVariantType(type.name)}
-                    disabled={data.variantTypes.some(vt => vt.type === type.name)}
-                    className={`flex items-center gap-2 p-2 rounded-lg border text-sm transition-all ${
-                      data.variantTypes.some(vt => vt.type === type.name)
-                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800'
-                        : 'border-gray-200 hover:border-brand-500 hover:bg-brand-50 dark:border-gray-700 dark:hover:border-brand-400 dark:hover:bg-brand-900/20'
-                    }`}
-                  >
-                    <span>{type.icon}</span>
-                    <span>{type.name}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom Type Input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newVariantType}
-                  onChange={(e) => setNewVariantType(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addVariantType(newVariantType))}
-                  placeholder="Custom variant type (e.g., Finish, Edition)..."
-                  className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
-                />
-                <button
-                  onClick={() => addVariantType(newVariantType)}
-                  className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white hover:bg-brand-600 dark:bg-brand-400 dark:hover:bg-brand-300"
-                >
-                  <MdAdd className="h-5 w-5" />
-                </button>
-              </div>
+            {/* Selected Variant Type Display */}
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                <span className="font-semibold">Selected Variant Type:</span> {
+                  data.selectedVariantType === 'color' ? '🎨 Color Variants' :
+                  data.selectedVariantType === 'model' ? '🏷️ Model Variants' :
+                  data.selectedVariantType === 'custom' ? '⚙️ Custom Variants' :
+                  'None Selected'
+                }
+              </p>
             </div>
 
-            {/* Variant Types List */}
-            {(data.variantTypes || []).length > 0 && (
-              <div className="space-y-4">
-                {data.variantTypes.map((variantType, typeIndex) => (
-                  <Card key={typeIndex} extra="p-4 border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                      <h6 className="text-base font-bold text-navy-700 dark:text-white">
-                        {variantType.type}
-                      </h6>
-                      <button
-                        onClick={() => removeVariantType(typeIndex)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
-                      >
-                        <MdDelete className="h-4 w-4" />
-                      </button>
+            {/* Variant Type Configuration */}
+            <div className="space-y-4">
+              {/* Color Variant */}
+              {data.selectedVariantType === 'color' && (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🎨</span>
+                    <div>
+                      <h6 className="text-base font-bold text-navy-700 dark:text-white">Color</h6>
+                      <p className="text-xs text-gray-500">Add color variations with optional sizes</p>
                     </div>
-
-                    {/* Values */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {variantType.values.map((value, valueIndex) => (
-                        <div
-                          key={valueIndex}
-                          className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        >
-                          <span>{value}</span>
-                          <button
-                            onClick={() => removeVariantValue(typeIndex, valueIndex)}
-                            className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200"
-                          >
-                            <MdClose className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Add Value */}
-                    <div className="flex gap-2">
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={data.variantTypes?.some(vt => vt.type === 'Color')}
+                    onChange={(e) => {
+                      const currentTypes = data.variantTypes || [];
+                      if (e.target.checked) {
+                        if (!currentTypes.some(vt => vt.type === 'Color')) {
+                          onDataChange({ variantTypes: [...currentTypes, { type: 'Color', values: [] }] });
+                        }
+                      } else {
+                        onDataChange({ variantTypes: currentTypes.filter(vt => vt.type !== 'Color') });
+                      }
+                    }}
+                    className="text-brand-500"
+                  />
+                </div>
+                
+                {/* Color Values Input */}
+                {data.variantTypes?.some(vt => vt.type === 'Color') && (
+                  <div className="ml-8">
+                    <div className="flex gap-2 mb-3">
                       <input
                         type="text"
-                        value={selectedVariantTypeIndex === typeIndex ? newVariantValue : ''}
-                        onChange={(e) => {
-                          setNewVariantValue(e.target.value);
-                          setSelectedVariantTypeIndex(typeIndex);
-                        }}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addVariantValue(typeIndex, newVariantValue))}
-                        placeholder={`Add ${variantType.type.toLowerCase()} value...`}
-                        className="flex-1 rounded-lg border border-gray-200 bg-white/0 p-2 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                        value={data.newColorValue || ''}
+                        onChange={(e) => onDataChange({ newColorValue: e.target.value })}
+                        placeholder="Enter color name (e.g., Red)"
+                        className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-2 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                                 onKeyPress={(e) => {
+                           if (e.key === 'Enter' && data.newColorValue?.trim()) {
+                             const newColor = data.newColorValue.trim();
+                             const currentColors = data.colorValues || [];
+                             if (!currentColors.includes(newColor)) {
+                               // Add color to colorValues
+                               onDataChange({ 
+                                 colorValues: [...currentColors, newColor],
+                                 newColorValue: ''
+                               });
+                               
+                               // Also add to variantSizes with empty array (no sizes initially)
+                               const key = `Color_${newColor}`;
+                               onDataChange({ 
+                                 variantSizes: { 
+                                   ...data.variantSizes, 
+                                   [key]: [] 
+                                 } 
+                               });
+                             }
+                           }
+                         }}
                       />
                       <button
-                        onClick={() => addVariantValue(typeIndex, newVariantValue)}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                                                 onClick={() => {
+                           if (data.newColorValue?.trim()) {
+                             const newColor = data.newColorValue.trim();
+                             const currentColors = data.colorValues || [];
+                             if (!currentColors.includes(newColor)) {
+                               // Add color to colorValues
+                               onDataChange({ 
+                                 colorValues: [...currentColors, newColor],
+                                 newColorValue: ''
+                               });
+                               
+                               // Also add to variantSizes with empty array (no sizes initially)
+                               const key = `Color_${newColor}`;
+                               onDataChange({ 
+                                 variantSizes: { 
+                                   ...data.variantSizes, 
+                                   [key]: [] 
+                                 } 
+                               });
+                             }
+                           }
+                         }}
+                        className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
                       >
-                        <MdAdd className="h-4 w-4" />
+                        <MdAdd className="h-5 w-5" />
                       </button>
                     </div>
-                  </Card>
-                ))}
+                    
+                    {/* Color Values List */}
+                    {(data.colorValues || []).length > 0 && (
+                      <div className="mb-4">
+                        <h6 className="text-sm font-bold text-navy-700 dark:text-white mb-2">Color Variants:</h6>
+                        <div className="space-y-3">
+                          {(data.colorValues || []).map((color, colorIndex) => (
+                            <div key={colorIndex} className="bg-gray-50 dark:bg-navy-700 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-navy-700 dark:text-white">
+                                  {color}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">Enable Sizes:</span>
+                                                                     <input
+                                     type="checkbox"
+                                     checked={data.variantSizes?.[`Color_${color}`] !== undefined}
+                                     onChange={(e) => {
+                                       const key = `Color_${color}`;
+                                       if (e.target.checked) {
+                                         // Enable sizes for this color
+                                         onDataChange({ 
+                                           variantSizes: { 
+                                             ...data.variantSizes, 
+                                             [key]: [] 
+                                           } 
+                                         });
+                                       } else {
+                                         // Disable sizes for this color but keep variant without sizes
+                                         const newVariantSizes = { ...data.variantSizes };
+                                         newVariantSizes[key] = []; // Empty array means no sizes but variant exists
+                                         onDataChange({ variantSizes: newVariantSizes });
+                                       }
+                                     }}
+                                     className="text-brand-500"
+                                   />
+                                  <button
+                                    onClick={() => {
+                                      const newColors = (data.colorValues || []).filter((_, index) => index !== colorIndex);
+                                      onDataChange({ colorValues: newColors });
+                                      // Also remove from variantSizes if exists
+                                      const key = `Color_${color}`;
+                                      if (data.variantSizes?.[key]) {
+                                        const newVariantSizes = { ...data.variantSizes };
+                                        delete newVariantSizes[key];
+                                        onDataChange({ variantSizes: newVariantSizes });
+                                      }
+                                    }}
+                                    className="flex items-center justify-center w-6 h-6 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                  >
+                                    <MdClose className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Size Selection for this color */}
+                              {data.variantSizes?.[`Color_${color}`]?.length >= 0 && (
+                                <div>
+                                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                                      <label key={size} className="flex items-center gap-2 cursor-pointer p-2 rounded border border-gray-200 hover:border-brand-500 dark:border-gray-600">
+                                        <input
+                                          type="checkbox"
+                                          checked={data.variantSizes?.[`Color_${color}`]?.includes(size)}
+                                          onChange={(e) => {
+                                            const key = `Color_${color}`;
+                                            const currentSizes = data.variantSizes?.[key] || [];
+                                            if (e.target.checked) {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: [...currentSizes, size] 
+                                                } 
+                                              });
+                                            } else {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: currentSizes.filter(s => s !== size) 
+                                                } 
+                                              });
+                                            }
+                                          }}
+                                          className="text-brand-500"
+                                        />
+                                        <span className="text-xs text-navy-700 dark:text-white">{size}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  
+                                                                     {/* Custom Size for this color */}
+                                   <div className="flex gap-2">
+                                     <input
+                                       type="text"
+                                       placeholder="Add custom size..."
+                                       className="flex-1 rounded border border-gray-200 bg-white/0 p-2 text-xs outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                       onKeyPress={(e) => {
+                                         if (e.key === 'Enter') {
+                                                                                        const customSize = e.target.value.trim();
+                                             if (customSize) {
+                                               const key = `Color_${color}`;
+                                               const currentSizes = data.variantSizes?.[key] || [];
+                                               if (!currentSizes.includes(customSize)) {
+                                                 onDataChange({ 
+                                                   variantSizes: { 
+                                                     ...data.variantSizes, 
+                                                     [key]: [...currentSizes, customSize] 
+                                                   } 
+                                                 });
+                                               }
+                                               e.target.value = '';
+                                             }
+                                           }
+                                         }}
+                                     />
+                                     <button
+                                       onClick={() => {
+                                         const customSizeInput = document.querySelector(`input[placeholder="Add custom size..."]`);
+                                         if (customSizeInput && customSizeInput.value.trim()) {
+                                           const customSize = customSizeInput.value.trim();
+                                           const key = `Color_${color}`;
+                                           const currentSizes = data.variantSizes?.[key] || [];
+                                           if (!currentSizes.includes(customSize)) {
+                                             onDataChange({ 
+                                               variantSizes: { 
+                                                 ...data.variantSizes, 
+                                                 [key]: [...currentSizes, customSize] 
+                                               } 
+                                             });
+                                             customSizeInput.value = '';
+                                           }
+                                         }
+                                       }}
+                                       className="flex items-center justify-center w-8 h-8 rounded bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                                     >
+                                       <MdAdd className="h-4 w-4" />
+                                     </button>
+                                   </div>
+                                   
+                                   {/* Display Custom Sizes with Remove Buttons */}
+                                   {data.variantSizes?.[`Color_${color}`]?.filter(size => !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size)).length > 0 && (
+                                     <div className="mt-3">
+                                       <div className="text-xs text-gray-500 mb-2">Custom Sizes:</div>
+                                       <div className="flex flex-wrap gap-2">
+                                         {data.variantSizes[`Color_${color}`]
+                                           .filter(size => !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size))
+                                           .map((customSize, sizeIndex) => (
+                                             <div
+                                               key={sizeIndex}
+                                               className="flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                                             >
+                                               <span>{customSize}</span>
+                                               <button
+                                                 onClick={() => {
+                                                   const key = `Color_${color}`;
+                                                   const currentSizes = data.variantSizes?.[key] || [];
+                                                   const newSizes = currentSizes.filter(s => s !== customSize);
+                                                   onDataChange({ 
+                                                     variantSizes: { 
+                                                       ...data.variantSizes, 
+                                                       [key]: newSizes 
+                                                     } 
+                                                   });
+                                                 }}
+                                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-200"
+                                               >
+                                                 <MdClose className="h-3 w-3" />
+                                               </button>
+                                             </div>
+                                           ))}
+                                       </div>
+                                     </div>
+                                   )}
+                                 </div>
+                               )}
+                               
+
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+              </div>
+              )}
+
+              {/* Model Variant */}
+              {data.selectedVariantType === 'model' && (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🏷️</span>
+                    <div>
+                      <h6 className="text-base font-bold text-navy-700 dark:text-white">Model</h6>
+                      <p className="text-xs text-gray-500">Add model variations with optional sizes</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={data.variantTypes?.some(vt => vt.type === 'Model')}
+                    onChange={(e) => {
+                      const currentTypes = data.variantTypes || [];
+                      if (e.target.checked) {
+                        if (!currentTypes.some(vt => vt.type === 'Model')) {
+                          onDataChange({ variantTypes: [...currentTypes, { type: 'Model', values: [] }] });
+                        }
+                      } else {
+                        onDataChange({ variantTypes: currentTypes.filter(vt => vt.type !== 'Model') });
+                      }
+                    }}
+                    className="text-brand-500"
+                  />
+                </div>
+                
+                {/* Model Values Input */}
+                {data.variantTypes?.some(vt => vt.type === 'Model') && (
+                  <div className="ml-8">
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={data.newModelValue || ''}
+                        onChange={(e) => onDataChange({ newModelValue: e.target.value })}
+                        placeholder="Enter model name (e.g., Basic)"
+                        className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-2 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                                 onKeyPress={(e) => {
+                           if (e.key === 'Enter' && data.newModelValue?.trim()) {
+                             const newModel = data.newModelValue.trim();
+                             const currentModels = data.modelValues || [];
+                             if (!currentModels.includes(newModel)) {
+                               // Add model to modelValues
+                               onDataChange({ 
+                                 modelValues: [...currentModels, newModel],
+                                 newModelValue: ''
+                               });
+                               
+                               // Also add to variantSizes with empty array (no sizes initially)
+                               const key = `Model_${newModel}`;
+                               onDataChange({ 
+                                 variantSizes: { 
+                                   ...data.variantSizes, 
+                                   [key]: [] 
+                                 } 
+                               });
+                             }
+                           }
+                         }}
+                      />
+                      <button
+                                                 onClick={() => {
+                           if (data.newModelValue?.trim()) {
+                             const newModel = data.newModelValue.trim();
+                             const currentModels = data.modelValues || [];
+                             if (!currentModels.includes(newModel)) {
+                               // Add model to modelValues
+                               onDataChange({ 
+                                 modelValues: [...currentModels, newModel],
+                                 newModelValue: ''
+                               });
+                               
+                               // Also add to variantSizes with empty array (no sizes initially)
+                               const key = `Model_${newModel}`;
+                               onDataChange({ 
+                                 variantSizes: { 
+                                   ...data.variantSizes, 
+                                   [key]: [] 
+                                 } 
+                               });
+                             }
+                           }
+                         }}
+                        className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                      >
+                        <MdAdd className="h-5 w-5" />
+                      </button>
+                    </div>
+                    
+                    {/* Model Values List */}
+                    {(data.modelValues || []).length > 0 && (
+                      <div className="mb-4">
+                        <h6 className="text-sm font-bold text-navy-700 dark:text-white mb-2">Model Variants:</h6>
+                        <div className="space-y-3">
+                          {(data.modelValues || []).map((model, modelIndex) => (
+                            <div key={modelIndex} className="bg-gray-50 dark:bg-navy-700 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-navy-700 dark:text-white">
+                                  {model}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">Enable Sizes:</span>
+                                                                     <input
+                                     type="checkbox"
+                                     checked={data.variantSizes?.[`Model_${model}`] !== undefined}
+                                     onChange={(e) => {
+                                       const key = `Model_${model}`;
+                                       if (e.target.checked) {
+                                         // Enable sizes for this model
+                                         onDataChange({ 
+                                           variantSizes: { 
+                                             ...data.variantSizes, 
+                                             [key]: [] 
+                                           } 
+                                         });
+                                       } else {
+                                         // Disable sizes for this model but keep variant without sizes
+                                         const newVariantSizes = { ...data.variantSizes };
+                                         newVariantSizes[key] = []; // Empty array means no sizes but variant exists
+                                         onDataChange({ variantSizes: newVariantSizes });
+                                       }
+                                     }}
+                                     className="text-brand-500"
+                                   />
+                                  <button
+                                    onClick={() => {
+                                      const newModels = (data.modelValues || []).filter((_, index) => index !== modelIndex);
+                                      onDataChange({ modelValues: newModels });
+                                      // Also remove from variantSizes if exists
+                                      const key = `Model_${model}`;
+                                      if (data.variantSizes?.[key]) {
+                                        const newVariantSizes = { ...data.variantSizes };
+                                        delete newVariantSizes[key];
+                                        onDataChange({ variantSizes: newVariantSizes });
+                                      }
+                                    }}
+                                    className="flex items-center justify-center w-6 h-6 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                  >
+                                    <MdClose className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Size Selection for this model */}
+                              {data.variantSizes?.[`Model_${model}`]?.length >= 0 && (
+                                <div>
+                                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                                      <label key={size} className="flex items-center gap-2 cursor-pointer p-2 rounded border border-gray-200 hover:border-brand-500 dark:border-gray-600">
+                                        <input
+                                          type="checkbox"
+                                          checked={data.variantSizes?.[`Model_${model}`]?.includes(size)}
+                                          onChange={(e) => {
+                                            const key = `Model_${model}`;
+                                            const currentSizes = data.variantSizes?.[key] || [];
+                                            if (e.target.checked) {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: [...currentSizes, size] 
+                                                } 
+                                              });
+                                            } else {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: currentSizes.filter(s => s !== size) 
+                                                } 
+                                              });
+                                            }
+                                          }}
+                                          className="text-brand-500"
+                                        />
+                                        <span className="text-xs text-navy-700 dark:text-white">{size}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  
+                                                                     {/* Custom Size for this model */}
+                                   <div className="flex gap-2">
+                                     <input
+                                       type="text"
+                                       placeholder="Add custom size..."
+                                       className="flex-1 rounded border border-gray-200 bg-white/0 p-2 text-xs outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                       onKeyPress={(e) => {
+                                         if (e.key === 'Enter') {
+                                           const customSize = e.target.value.trim();
+                                           if (customSize) {
+                                             const key = `Model_${model}`;
+                                             const currentSizes = data.variantSizes?.[key] || [];
+                                             if (!currentSizes.includes(customSize)) {
+                                               onDataChange({ 
+                                                 variantSizes: { 
+                                                   ...data.variantSizes, 
+                                                   [key]: [...currentSizes, customSize] 
+                                                 } 
+                                               });
+                                             }
+                                             e.target.value = '';
+                                           }
+                                         }
+                                       }}
+                                     />
+                                     <button
+                                       onClick={() => {
+                                         const customSizeInput = document.querySelector(`input[placeholder="Add custom size..."]`);
+                                         if (customSizeInput && customSizeInput.value.trim()) {
+                                           const customSize = customSizeInput.value.trim();
+                                           const key = `Model_${model}`;
+                                           const currentSizes = data.variantSizes?.[key] || [];
+                                           if (!currentSizes.includes(customSize)) {
+                                             onDataChange({ 
+                                               variantSizes: { 
+                                                 ...data.variantSizes, 
+                                                 [key]: [...currentSizes, customSize] 
+                                               } 
+                                             });
+                                             customSizeInput.value = '';
+                                           }
+                                         }
+                                       }}
+                                       className="flex items-center justify-center w-8 h-8 rounded bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                                     >
+                                       <MdAdd className="h-4 w-4" />
+                                     </button>
+                                   </div>
+                                   
+                                   {/* Display Custom Sizes with Remove Buttons */}
+                                   {data.variantSizes?.[`Model_${model}`]?.filter(size => !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size)).length > 0 && (
+                                     <div className="mt-3">
+                                       <div className="text-xs text-gray-500 mb-2">Custom Sizes:</div>
+                                       <div className="flex flex-wrap gap-2">
+                                         {data.variantSizes[`Model_${model}`]
+                                           .filter(size => !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size))
+                                           .map((customSize, sizeIndex) => (
+                                             <div
+                                               key={sizeIndex}
+                                               className="flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                                             >
+                                               <span>{customSize}</span>
+                                               <button
+                                                 onClick={() => {
+                                                   const key = `Model_${model}`;
+                                                   const currentSizes = data.variantSizes?.[key] || [];
+                                                   const newSizes = currentSizes.filter(s => s !== customSize);
+                                                   onDataChange({ 
+                                                     variantSizes: { 
+                                                       ...data.variantSizes, 
+                                                       [key]: newSizes 
+                                                     } 
+                                                   });
+                                                 }}
+                                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-200"
+                                               >
+                                                 <MdClose className="h-3 w-3" />
+                                               </button>
+                                             </div>
+                                           ))}
+                                       </div>
+                                     </div>
+                                   )}
+                                 </div>
+                               )}
+                               
+
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+               </div>
+               )}
+
+               {/* Custom Variant */}
+               {data.selectedVariantType === 'custom' && (
+                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">✨</span>
+                    <div>
+                      <h6 className="text-base font-bold text-navy-700 dark:text-white">Others</h6>
+                      <p className="text-xs text-gray-500">Create custom variant type with optional sizes</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={data.variantTypes?.some(vt => vt.type === 'Others')}
+                    onChange={(e) => {
+                      const currentTypes = data.variantTypes || [];
+                      if (e.target.checked) {
+                        if (!currentTypes.some(vt => vt.type === 'Others')) {
+                          onDataChange({ variantTypes: [...currentTypes, { type: 'Others', values: [] }] });
+                        }
+                      } else {
+                        onDataChange({ variantTypes: currentTypes.filter(vt => vt.type !== 'Others') });
+                      }
+                    }}
+                    className="text-brand-500"
+                  />
+                </div>
+                
+                {/* Others Values Input */}
+                {data.variantTypes?.some(vt => vt.type === 'Others') && (
+                  <div className="ml-8">
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={data.customVariantName || ''}
+                        onChange={(e) => onDataChange({ customVariantName: e.target.value })}
+                        placeholder="Custom variant name (e.g., Finish, Edition)"
+                        className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-2 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                      />
+                    </div>
+                    
+                    {/* Custom Variant Values Input */}
+                    {data.customVariantName && (
+                      <div className="flex gap-2 mb-3">
+                        <input
+                          type="text"
+                          value={data.newCustomVariantValue || ''}
+                          onChange={(e) => onDataChange({ newCustomVariantValue: e.target.value })}
+                          placeholder="Enter variant value (e.g., Matte)"
+                          className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-2 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                                     onKeyPress={(e) => {
+                             if (e.key === 'Enter' && data.newCustomVariantValue?.trim()) {
+                               const newValue = data.newCustomVariantValue.trim();
+                               const currentValues = data.customVariantValues || [];
+                               if (!currentValues.includes(newValue)) {
+                                 // Add value to customVariantValues
+                                 onDataChange({ 
+                                   customVariantValues: [...currentValues, newValue],
+                                   newCustomVariantValue: ''
+                                 });
+                                 
+                                 // Also add to variantSizes with empty array (no sizes initially)
+                                 const key = `${data.customVariantName}_${newValue}`;
+                                 onDataChange({ 
+                                   variantSizes: { 
+                                     ...data.variantSizes, 
+                                     [key]: [] 
+                                   } 
+                                 });
+                               }
+                             }
+                           }}
+                        />
+                        <button
+                                                   onClick={() => {
+                           if (data.newCustomVariantValue?.trim()) {
+                             const newValue = data.newCustomVariantValue.trim();
+                             const currentValues = data.customVariantValues || [];
+                             if (!currentValues.includes(newValue)) {
+                               // Add value to customVariantValues
+                               onDataChange({ 
+                                 customVariantValues: [...currentValues, newValue],
+                                 newCustomVariantValue: ''
+                               });
+                               
+                               // Also add to variantSizes with empty array (no sizes initially)
+                               const key = `${data.customVariantName}_${newValue}`;
+                               onDataChange({ 
+                                 variantSizes: { 
+                                   ...data.variantSizes, 
+                                   [key]: [] 
+                                 } 
+                               });
+                             }
+                           }
+                         }}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                        >
+                          <MdAdd className="h-5 w-5" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Custom Variant Values List */}
+                    {data.customVariantName && (data.customVariantValues || []).length > 0 && (
+                      <div className="mb-4">
+                        <h6 className="text-sm font-bold text-navy-700 dark:text-white mb-2">
+                          {data.customVariantName} Variants:
+                        </h6>
+                        <div className="space-y-3">
+                          {(data.customVariantValues || []).map((value, valueIndex) => (
+                            <div key={valueIndex} className="bg-gray-50 dark:bg-navy-700 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-navy-700 dark:text-white">
+                                  {value}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">Enable Sizes:</span>
+                                                                     <input
+                                     type="checkbox"
+                                     checked={data.variantSizes?.[`${data.customVariantName}_${value}`] !== undefined}
+                                     onChange={(e) => {
+                                       const key = `${data.customVariantName}_${value}`;
+                                       if (e.target.checked) {
+                                         // Enable sizes for this custom variant
+                                         onDataChange({ 
+                                           variantSizes: { 
+                                             ...data.variantSizes, 
+                                             [key]: [] 
+                                           } 
+                                         });
+                                       } else {
+                                         // Disable sizes for this custom variant but keep variant without sizes
+                                         const newVariantSizes = { ...data.variantSizes };
+                                         newVariantSizes[key] = []; // Empty array means no sizes but variant exists
+                                         onDataChange({ variantSizes: newVariantSizes });
+                                       }
+                                     }}
+                                     className="text-brand-500"
+                                   />
+                                  <button
+                                    onClick={() => {
+                                      const newValues = (data.customVariantValues || []).filter((_, index) => index !== valueIndex);
+                                      onDataChange({ customVariantValues: newValues });
+                                      // Also remove from variantSizes if exists
+                                      const key = `${data.customVariantName}_${value}`;
+                                      if (data.variantSizes?.[key]) {
+                                        const newVariantSizes = { ...data.variantSizes };
+                                        delete newVariantSizes[key];
+                                        onDataChange({ variantSizes: newVariantSizes });
+                                      }
+                                    }}
+                                    className="flex items-center justify-center w-6 h-6 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                  >
+                                    <MdClose className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Size Selection for this custom variant */}
+                              {data.variantSizes?.[`${data.customVariantName}_${value}`]?.length >= 0 && (
+                                <div>
+                                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                                      <label key={size} className="flex items-center gap-2 cursor-pointer p-2 rounded border border-gray-200 hover:border-brand-500 dark:border-gray-600">
+                                        <input
+                                          type="checkbox"
+                                          checked={data.variantSizes?.[`${data.customVariantName}_${value}`]?.includes(size)}
+                                          onChange={(e) => {
+                                            const key = `${data.customVariantName}_${value}`;
+                                            const currentSizes = data.variantSizes?.[key] || [];
+                                            if (e.target.checked) {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: [...currentSizes, size] 
+                                                } 
+                                              });
+                                            } else {
+                                              onDataChange({ 
+                                                variantSizes: { 
+                                                  ...data.variantSizes, 
+                                                  [key]: currentSizes.filter(s => s !== size) 
+                                                } 
+                                              });
+                                            }
+                                          }}
+                                          className="text-brand-500"
+                                        />
+                                        <span className="text-xs text-navy-700 dark:text-white">{size}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  
+                                                                     {/* Custom Size for this custom variant */}
+                                   <div className="flex gap-2">
+                                     <input
+                                       type="text"
+                                       placeholder="Add custom size..."
+                                       className="flex-1 rounded border border-gray-200 bg-white/0 p-2 text-xs outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
+                                       onKeyPress={(e) => {
+                                         if (e.key === 'Enter') {
+                                           const customSize = e.target.value.trim();
+                                           if (customSize) {
+                                             const key = `${data.customVariantName}_${value}`;
+                                             const currentSizes = data.variantSizes?.[key] || [];
+                                             if (!currentSizes.includes(customSize)) {
+                                               onDataChange({ 
+                                                 variantSizes: { 
+                                                   ...data.variantSizes, 
+                                                   [key]: [...currentSizes, customSize] 
+                                                 } 
+                                               });
+                                             }
+                                             e.target.value = '';
+                                           }
+                                         }
+                                       }}
+                                     />
+                                     <button
+                                       onClick={() => {
+                                         const customSizeInput = document.querySelector(`input[placeholder="Add custom size..."]`);
+                                         if (customSizeInput && customSizeInput.value.trim()) {
+                                           const customSize = customSizeInput.value.trim();
+                                           const key = `${data.customVariantName}_${value}`;
+                                           const currentSizes = data.variantSizes?.[key] || [];
+                                           if (!currentSizes.includes(customSize)) {
+                                             onDataChange({ 
+                                               variantSizes: { 
+                                                 ...data.variantSizes, 
+                                                 [key]: [...currentSizes, customSize] 
+                                               } 
+                                             });
+                                             customSizeInput.value = '';
+                                           }
+                                         }
+                                       }}
+                                       className="flex items-center justify-center w-8 h-8 rounded bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-300"
+                                     >
+                                       <MdAdd className="h-4 w-4" />
+                                     </button>
+                                   </div>
+                                   
+                                   {/* Display Custom Sizes with Remove Buttons */}
+                                   {data.variantSizes?.[`${data.customVariantName}_${value}`]?.filter(size => !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size)).length > 0 && (
+                                     <div className="mt-3">
+                                       <div className="text-xs text-gray-500 mb-2">Custom Sizes:</div>
+                                       <div className="flex flex-wrap gap-2">
+                                         {data.variantSizes[`${data.customVariantName}_${value}`]
+                                           .filter(size => !['XS', 'S', 'M', 'L', 'XXL'].includes(size))
+                                           .map((customSize, sizeIndex) => (
+                                             <div
+                                               key={sizeIndex}
+                                               className="flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                                             >
+                                               <span>{customSize}</span>
+                                               <button
+                                                 onClick={() => {
+                                                   const key = `${data.customVariantName}_${value}`;
+                                                   const currentSizes = data.variantSizes?.[key] || [];
+                                                   const newSizes = currentSizes.filter(s => s !== customSize);
+                                                   onDataChange({ 
+                                                     variantSizes: { 
+                                                       ...data.variantSizes, 
+                                                       [key]: newSizes 
+                                                     } 
+                                                   });
+                                                 }}
+                                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-200"
+                                               >
+                                                 <MdClose className="h-3 w-3" />
+                                               </button>
+                                             </div>
+                                           ))}
+                                       </div>
+                                     </div>
+                                   )}
+                                 </div>
+                               )}
+                               
+
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+               </div>
+               )}
+             </div>
+
+            {/* Preview Generated Variants */}
+            {Object.keys(data.variantSizes || {}).length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h6 className="mb-3 text-base font-bold text-navy-700 dark:text-white">
+                  Variant Combinations Preview
+                </h6>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {Object.entries(data.variantSizes || {}).map(([key, sizes]) => {
+                    if (sizes.length > 0) {
+                      const [variantType, variantValue] = key.split('_');
+                      return (
+                        <div key={key} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-navy-700 rounded-lg">
+                          <span className="text-sm text-navy-700 dark:text-white">
+                            {variantType}: {variantValue} - {sizes.join(', ')}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {sizes.length} size(s)
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      // Show variants without sizes
+                      const [variantType, variantValue] = key.split('_');
+                      return (
+                        <div key={key} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                          <span className="text-sm text-blue-700 dark:text-blue-300">
+                            {variantType}: {variantValue} - No sizes
+                          </span>
+                          <span className="text-xs text-blue-500">Single variant</span>
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  In the next step, you'll set individual pricing and inventory for each variant combination.
+                </p>
               </div>
             )}
+          </Card>
+        )}
 
-            {/* Size Matrix */}
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Single Variant Info */}
+        {data.variantMode === 'single' && (
+          <Card extra="p-5">
+            <h6 className="mb-3 text-lg font-bold text-navy-700 dark:text-white">
+              Single Variant Configuration
+            </h6>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Your product will have a single configuration. You can enable size variations below.
+            </p>
+            
+            {/* Size Matrix for Single Variant */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h6 className="text-base font-bold text-navy-700 dark:text-white">
-                    Enable Size Matrix
+                    Enable Size Variations
                   </h6>
                   <p className="text-sm text-gray-600">
-                    Add size variations to all variant combinations
+                    Add different sizes with individual pricing and stock
                   </p>
                 </div>
                 <div>
                   <input
                     type="checkbox"
-                    id="enableSizeMatrix"
+                    id="enableSizeMatrixSingle"
                     checked={data.enableSizeMatrix}
                     onChange={(e) => handleSizeMatrixToggle(e.target.checked)}
                     className="relative h-5 w-10 appearance-none rounded-[20px] bg-[#e0e5f2] outline-none transition duration-[0.5s] 
@@ -377,32 +1133,56 @@ const VariantConfiguration = ({ data, onDataChange }) => {
                     Available Sizes
                   </label>
                   
-                  {/* Size Tags */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {(data.sizes || []).map((size, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                      >
-                        <span>{size}</span>
-                        <button
-                          onClick={() => removeSize(index)}
-                          className="text-purple-500 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-200"
-                        >
-                          <MdClose className="h-3 w-3" />
-                        </button>
-                      </div>
+                  {/* Predefined Sizes */}
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                      <label key={size} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-gray-200 hover:border-brand-500 dark:border-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={data.sizes?.includes(size)}
+                          onChange={(e) => {
+                            const currentSizes = data.sizes || [];
+                            if (e.target.checked) {
+                              onDataChange({ sizes: [...currentSizes, size] });
+                            } else {
+                              onDataChange({ sizes: currentSizes.filter(s => s !== size) });
+                            }
+                          }}
+                          className="text-brand-500"
+                        />
+                        <span className="text-sm text-navy-700 dark:text-white">{size}</span>
+                      </label>
                     ))}
                   </div>
+                  
+                  {/* Size Tags */}
+                  {(data.sizes || []).length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {(data.sizes || []).map((size, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                        >
+                          <span>{size}</span>
+                          <button
+                            onClick={() => removeSize(index)}
+                            className="text-purple-500 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-200"
+                          >
+                            <MdClose className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Add Size */}
+                  {/* Add Custom Size */}
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={newSize}
                       onChange={(e) => setNewSize(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSize())}
-                      placeholder="Add size (e.g., S, M, L, XL, 32, 34)..."
+                      placeholder="Add custom size (e.g., 32, 34, 36)..."
                       className="flex-1 rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
                     />
                     <button
@@ -412,44 +1192,27 @@ const VariantConfiguration = ({ data, onDataChange }) => {
                       <MdAdd className="h-5 w-5" />
                     </button>
                   </div>
+
+                  {/* Size Preview */}
+                  {(data.sizes || []).length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-50 dark:bg-navy-700 rounded-lg">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        You've selected {data.sizes.length} size(s). In the next step, you'll be able to set:
+                      </p>
+                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        <li>• Individual MRP for each size</li>
+                        <li>• Individual stock quantity for each size</li>
+                        <li>• Individual discount percentage for each size</li>
+                        <li>• Individual discounted price for each size</li>
+                        <li>• Individual SKU and barcode for each size</li>
+                      </ul>
+                    </div>
+                  )}
+                  
+
                 </div>
               )}
             </div>
-
-            {/* Preview Generated Variants */}
-            {(data.variants || []).length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h6 className="mb-3 text-base font-bold text-navy-700 dark:text-white">
-                  Generated Variants Preview ({data.variants.length})
-                </h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                  {data.variants.slice(0, 10).map((variant, index) => (
-                    <div key={variant.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-navy-700 rounded-lg">
-                      <span className="text-sm text-navy-700 dark:text-white">{variant.name}</span>
-                      <span className="text-xs text-gray-500">#{variant.id}</span>
-                    </div>
-                  ))}
-                  {data.variants.length > 10 && (
-                    <div className="p-2 text-center text-sm text-gray-500">
-                      ... and {data.variants.length - 10} more variants
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* Single Variant Info */}
-        {data.variantMode === 'single' && (
-          <Card extra="p-5">
-            <h6 className="mb-3 text-lg font-bold text-navy-700 dark:text-white">
-              Single Variant Configuration
-            </h6>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Your product will have a single configuration with one set of pricing and inventory. 
-              You can proceed to the next step to set up pricing and stock details.
-            </p>
           </Card>
         )}
       </div>

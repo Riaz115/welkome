@@ -3,10 +3,12 @@ import { MdAdd, MdClose, MdOutlineCloudUpload } from "react-icons/md";
 import InputField from "components/fields/InputField";
 import TextField from "components/fields/TextField";
 import DropZonefile from "../../../../newProduct/components/DropZonefile";
+import VideoDropZonefile from "../../../../newProduct/components/VideoDropZonefile";
+import { MdVideoLibrary } from "react-icons/md";
 import { useCategoryApiStore } from "stores/useCategoryApiStore";
 import { toast } from "react-toastify";
 
-const ProductUpdate = ({ productData, onDataChange }) => {
+const ProductUpdate = ({ data, onDataChange }) => {
   const [newTag, setNewTag] = useState('');
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandOptions, setShowBrandOptions] = useState(false);
@@ -15,7 +17,13 @@ const ProductUpdate = ({ productData, onDataChange }) => {
   const [brandSelectedImage, setBrandSelectedImage] = useState(null);
   const [brandImagePreview, setBrandImagePreview] = useState(null);
   const [savingBrand, setSavingBrand] = useState(false);
-  
+  const [showPrimeCategoryOptions, setShowPrimeCategoryOptions] = useState(false);
+  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
+  const [showSubcategoryOptions, setShowSubcategoryOptions] = useState(false);
+  const [primeCategorySearch, setPrimeCategorySearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [subcategorySearch, setSubcategorySearch] = useState('');
+
   const processedPrimeCategory = useRef(false);
   const processedCategory = useRef(false);
   const processedSeoSlug = useRef(false);
@@ -42,44 +50,49 @@ const ProductUpdate = ({ productData, onDataChange }) => {
   }, []);
 
   useEffect(() => {
-    if (productData && primeCategories.length > 0 && !productData.primeCategoryId && !processedPrimeCategory.current) {
-      const primeCategory = primeCategories.find(p => p.name === productData.primeCategory);
-      if (primeCategory) {
-        const categoryId = primeCategory._id || primeCategory.id;
-        processedPrimeCategory.current = true;
-        
-        if (onDataChange) {
-          onDataChange({ primeCategoryId: categoryId });
-        }
-        
-        if (categoryId && categoryId !== '' && categoryId !== null && categoryId !== undefined) {
-          fetchCategoriesByPrimeCategory(categoryId);
-        }
-      }
+    if (data?.primeCategory && typeof data.primeCategory === 'string') {
+      setPrimeCategorySearch(data.primeCategory);
+    } else {
+      setPrimeCategorySearch('');
     }
-  }, [productData?.primeCategory, primeCategories, fetchCategoriesByPrimeCategory]);
+    if (data?.category && typeof data.category === 'string') {
+      setCategorySearch(data.category);
+    } else {
+      setCategorySearch('');
+    }
+    if (data?.subcategory && typeof data.subcategory === 'string') {
+      setSubcategorySearch(data.subcategory);
+    } else {
+      setSubcategorySearch('');
+    }
+  }, [data?.primeCategory, data?.category, data?.subcategory]);
 
   useEffect(() => {
-    if (productData && categories.length > 0 && !productData.categoryId && !processedCategory.current) {
-      const category = categories.find(c => c.name === productData.category);
-      if (category) {
-        const categoryId = category._id || category.id;
-        processedCategory.current = true;
-        
-        if (onDataChange) {
-          onDataChange({ categoryId: categoryId });
-        }
-        
-        if (categoryId && categoryId !== '' && categoryId !== null && categoryId !== undefined) {
-          fetchSubcategoriesByCategory(categoryId);
-        }
+    const handleClickOutside = (event) => {
+      if (event.target.closest('.category-dropdown') || event.target.closest('.category-input')) {
+        return;
       }
-    }
-  }, [productData?.category, categories, fetchSubcategoriesByCategory]);
+
+      if (showPrimeCategoryOptions) {
+        setShowPrimeCategoryOptions(false);
+      }
+      if (showCategoryOptions) {
+        setShowCategoryOptions(false);
+      }
+      if (showSubcategoryOptions) {
+        setShowSubcategoryOptions(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showPrimeCategoryOptions, showCategoryOptions, showSubcategoryOptions]);
 
   useEffect(() => {
-    if (productData?.title && !productData?.seoSlug && onDataChange && !processedSeoSlug.current) {
-      const slug = productData.title.toLowerCase()
+    if (data?.title && !data?.seoSlug && onDataChange && !processedSeoSlug.current) {
+      const slug = data.title.toLowerCase()
         .replace(/[^a-z0-9 -]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
@@ -87,85 +100,77 @@ const ProductUpdate = ({ productData, onDataChange }) => {
       processedSeoSlug.current = true;
       onDataChange({ seoSlug: slug });
     }
-  }, [productData?.title, productData?.seoSlug]);
+  }, [data?.title, data?.seoSlug]);
 
   const handleInputChange = (field, value) => {
-    if (onDataChange) {
-      onDataChange({ [field]: value });
-    }
-    
+    onDataChange({ [field]: value });
+
     if (field === 'title') {
       const slug = value.toLowerCase()
         .replace(/[^a-z0-9 -]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .trim('-');
-      if (onDataChange) {
-        onDataChange({ seoSlug: slug });
-      }
+      onDataChange({ seoSlug: slug });
     }
   };
 
   const handleCategoryChange = (level, value) => {
     if (level === 'prime') {
-      const selected = primeCategories.find((p) => p.name === value);
-      if (onDataChange) {
-        onDataChange({ 
-          primeCategory: selected?.name || '',
-          primeCategoryId: selected?._id || selected?.id || '',
-          category: '',
-          categoryId: '',
-          subcategory: '',
-          subcategoryId: ''
-        });
-      }
+      const selected = primeCategories.find((p) => p.id === value || p._id === value);
+      onDataChange({
+        primeCategory: selected?.name || '',
+        primeCategoryId: selected?._id || selected?.id || value,
+        category: '',
+        categoryId: '',
+        subcategory: '',
+        subcategoryId: ''
+      });
+      setPrimeCategorySearch('');
+      setCategorySearch('');
+      setSubcategorySearch('');
       resetCategories();
       resetSubcategories();
-      if (selected?._id || selected?.id) {
-        fetchCategoriesByPrimeCategory(selected._id || selected.id);
+      if (selected?._id || selected?.id || value) {
+        fetchCategoriesByPrimeCategory(selected?._id || selected?.id || value);
       }
     } else if (level === 'category') {
-      const selected = categories.find((c) => c.name === value);
-      if (onDataChange) {
-        onDataChange({ 
-          category: selected?.name || '',
-          categoryId: selected?._id || selected?.id || '',
-          subcategory: '',
-          subcategoryId: ''
-        });
-      }
+      const selected = categories.find((c) => c.id === value || c._id === value);
+      onDataChange({
+        category: selected?.name || '',
+        categoryId: selected?._id || selected?.id || value,
+        subcategory: '',
+        subcategoryId: ''
+      });
+      setCategorySearch('');
+      setSubcategorySearch('');
       resetSubcategories();
-      if (selected?._id || selected?.id) {
-        fetchSubcategoriesByCategory(selected._id || selected.id);
+      if (selected?._id || selected?.id || value) {
+        fetchSubcategoriesByCategory(selected?._id || selected?.id || value);
       }
     } else if (level === 'subcategory') {
-      const selected = subcategories.find((s) => s.name === value);
-      if (onDataChange) {
-        onDataChange({ 
-          subcategory: selected?.name || '',
-          subcategoryId: selected?._id || selected?.id || ''
-        });
-      }
+      const selected = subcategories.find((s) => s.id === value || s._id === value);
+      onDataChange({
+        subcategory: selected?.name || '',
+        subcategoryId: selected?._id || selected?.id || value
+      });
+      setSubcategorySearch('');
     }
   };
 
   const handleAddTag = () => {
-    if (newTag.trim() && !(productData?.tags || []).includes(newTag.trim())) {
-      if (onDataChange) {
-        onDataChange({ 
-          tags: [...(productData?.tags || []), newTag.trim()] 
-        });
-      }
+    if (newTag.trim() && !(data?.tags || []).includes(newTag.trim())) {
+      onDataChange({
+        tags: [...(data?.tags || []), newTag.trim()]
+      });
       setNewTag('');
     }
   };
 
   const handleRemoveTag = (tagToRemove) => {
-    if (onDataChange) {
-      onDataChange({ 
-        tags: (productData?.tags || []).filter(tag => tag !== tagToRemove) 
-      });
-    }
+    onDataChange({
+      tags: (data?.tags || []).filter(tag => tag !== tagToRemove)
+    });
   };
 
   const onImageDrop = useCallback((acceptedFiles) => {
@@ -176,35 +181,78 @@ const ProductUpdate = ({ productData, onDataChange }) => {
         name: file.name,
         size: file.size
       }));
-      
-      if (onDataChange) {
+
+      onDataChange({
+        images: [...(data?.images || []), ...files]
+      });
+    }
+  }, [data?.images, onDataChange]);
+
+  const removeImage = (indexToRemove) => {
+    const updatedImages = (data?.images || []).filter((_, index) => index !== indexToRemove);
+    onDataChange({ images: updatedImages });
+  };
+
+  const onVideoDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles.length > 0) {
+      const files = acceptedFiles.map(file => {
+        const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/webm', 'video/ogg'];
+        const allowedExtensions = ['.mp4', '.mov', '.avi', '.webm', '.ogg'];
+
+        const isValidType = allowedTypes.includes(file.type);
+        const isValidExtension = allowedExtensions.some(ext =>
+          file.name.toLowerCase().endsWith(ext)
+        );
+
+        if (!isValidType || !isValidExtension) {
+          toast.error('Please upload only video files (MP4, MOV, AVI, WebM, OGG)');
+          return null;
+        }
+
+        return {
+          file,
+          preview: URL.createObjectURL(file),
+          name: file.name,
+          size: file.size
+        };
+      }).filter(Boolean);
+
+      if (files.length > 0) {
         onDataChange({
-          images: [...(productData?.images || []), ...files]
+          videos: [...(data?.videos || []), ...files]
         });
       }
     }
-  }, [productData?.images, onDataChange]);
+  }, [data?.videos, onDataChange]);
 
-  const removeImage = (indexToRemove) => {
-    const updatedImages = (productData?.images || []).filter((_, index) => index !== indexToRemove);
-    if (onDataChange) {
-      onDataChange({ images: updatedImages });
-    }
+  const removeVideo = (indexToRemove) => {
+    const updatedVideos = (data?.videos || []).filter((_, index) => index !== indexToRemove);
+    onDataChange({ videos: updatedVideos });
   };
 
   const handleBrandSelect = (brand) => {
-    if (onDataChange) {
-      onDataChange({ 
-        brand: brand.name,
-        brandId: brand._id || brand.id
-      });
-    }
+    onDataChange({
+      brand: brand.name,
+      brandId: brand._id || brand.id
+    });
     setShowBrandOptions(false);
     setBrandSearch('');
   };
 
   const filteredBrands = (brands || []).filter(brand =>
     brand.name.toLowerCase().includes(brandSearch.toLowerCase())
+  );
+
+  const filteredPrimeCategories = (primeCategories || []).filter(prime =>
+    !primeCategorySearch || prime.name.toLowerCase().includes(primeCategorySearch.toLowerCase())
+  );
+
+  const filteredCategories = (categories || []).filter(category =>
+    !categorySearch || category.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
+  const filteredSubcategories = (subcategories || []).filter(subcategory =>
+    !subcategorySearch || subcategory.name.toLowerCase().includes(subcategorySearch.toLowerCase())
   );
 
   const openAddBrandModal = () => {
@@ -233,7 +281,6 @@ const ProductUpdate = ({ productData, onDataChange }) => {
       const created = await createBrand(fd);
       toast.success('Brand created');
       setShowBrandModal(false);
-      // Refresh and select the new brand
       await fetchBrands();
       const createdId = created?._id || created?.id;
       const createdName = created?.name;
@@ -241,9 +288,7 @@ const ProductUpdate = ({ productData, onDataChange }) => {
       if (match) {
         handleBrandSelect(match);
       } else if (createdId || createdName) {
-        if (onDataChange) {
-          onDataChange({ brand: createdName || '', brandId: createdId || '' });
-        }
+        onDataChange({ brand: createdName || '', brandId: createdId || '' });
       }
     } catch (e) {
       toast.error(e.message || 'Failed to create brand');
@@ -263,14 +308,12 @@ const ProductUpdate = ({ productData, onDataChange }) => {
       <div className="mt-6 space-y-6">
         {/* Product Title & Subtitle */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {console.log('Product Title:', productData?.title)}
-          {console.log('Product Name:', productData?.name)}
           <InputField
             label="Product Title *"
             placeholder="eg. Elegant Wireless Headphones"
             id="title"
             type="text"
-            value={productData?.title || productData?.name || ""}
+            value={data?.title || ""}
             onChange={(e) => handleInputChange('title', e.target.value)}
             extra="col-span-1"
           />
@@ -279,7 +322,7 @@ const ProductUpdate = ({ productData, onDataChange }) => {
             placeholder="eg. Premium Sound Quality"
             id="subtitle"
             type="text"
-            value={productData?.subtitle || ""}
+            value={data?.subtitle || ""}
             onChange={(e) => handleInputChange('subtitle', e.target.value)}
             extra="col-span-1"
           />
@@ -290,23 +333,35 @@ const ProductUpdate = ({ productData, onDataChange }) => {
             Brand
           </label>
           <div className="relative">
-            <input
-              type="text"
-              value={productData?.brand || brandSearch}
-              onChange={(e) => {
-                setBrandSearch(e.target.value);
-                setShowBrandOptions(true);
-                if (!e.target.value) {
-                  if (onDataChange) {
+            <div className="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white/0 p-3 dark:!border-white/10 dark:!bg-navy-800">
+              {data?.brand && (
+                <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                  {brands.find(b => b.name === data.brand)?.image && (
+                    <img
+                      src={brands.find(b => b.name === data.brand)?.image}
+                      alt={data.brand}
+                      className="h-8 w-8 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-navy-700 dark:text-white font-medium truncate">{data.brand}</span>
+                </div>
+              )}
+              <input
+                type="text"
+                value={brandSearch}
+                onChange={(e) => {
+                  setBrandSearch(e.target.value);
+                  setShowBrandOptions(true);
+                  if (!e.target.value) {
                     onDataChange({ brand: '', brandId: '' });
                   }
-                }
-              }}
-              onFocus={() => setShowBrandOptions(true)}
-              placeholder="Search or select brand..."
-              className="w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
-            />
-            
+                }}
+                onFocus={() => setShowBrandOptions(true)}
+                placeholder={data?.brand ? "Change brand..." : "Search or select brand..."}
+                className="flex-1 bg-transparent text-sm outline-none dark:text-white"
+              />
+            </div>
+
             {showBrandOptions && (
               <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-navy-800">
                 {filteredBrands.map((brand) => (
@@ -319,9 +374,9 @@ const ProductUpdate = ({ productData, onDataChange }) => {
                     <span className="text-sm text-navy-700 dark:text-white">{brand.name}</span>
                   </div>
                 ))}
-                <div 
+                <div
                   onClick={openAddBrandModal}
-                  className="flex items-center gap-3 p-3 border-t border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-navy-700 cursor-pointer"
+                  className="flex items-center gap-3 p-3 border-t border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-navy-600 cursor-pointer"
                 >
                   <div className="h-8 w-8 rounded bg-gray-200 dark:bg-navy-600 flex items-center justify-center">
                     <MdAdd className="h-4 w-4" />
@@ -333,71 +388,234 @@ const ProductUpdate = ({ productData, onDataChange }) => {
           </div>
         </div>
 
-        <div>
-          <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
-            Category Path *
-          </label>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {/* Prime Category */}
-            <div>
-              <select
-                value={productData?.primeCategory || ''}
-                onChange={(e) => handleCategoryChange('prime', e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:!bg-navy-800"
-              >
-                <option value="">Select Prime Category</option>
-                {(primeCategories || []).map((prime) => (
-                  <option key={prime._id || prime.id} value={prime.name}>{prime.name}</option>
-                ))}
-              </select>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="relative category-dropdown">
+            <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
+              Prime Category *
+            </label>
+            <div className="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white/0 p-3 dark:!border-white/10 dark:!bg-navy-800">
+              {data?.primeCategory && (
+                <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                  {primeCategories.find(p => p.name === data.primeCategory)?.image && (
+                    <img
+                      src={primeCategories.find(p => p.name === data.primeCategory)?.image}
+                      alt={data.primeCategory}
+                      className="h-8 w-8 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-navy-700 dark:text-white font-medium truncate">{data.primeCategory}</span>
+                </div>
+              )}
+              <input
+                type="text"
+                value={primeCategorySearch}
+                onChange={(e) => {
+                  setPrimeCategorySearch(e.target.value);
+                  setShowPrimeCategoryOptions(true);
+                }}
+                onClick={() => {
+                  setPrimeCategorySearch('');
+                  setShowPrimeCategoryOptions(true);
+                }}
+                onFocus={() => setShowPrimeCategoryOptions(true)}
+                placeholder="Search or select prime category..."
+                className="flex-1 bg-transparent text-sm outline-none dark:text-white"
+              />
             </div>
 
-            {/* Category */}
-            <div>
-              <select
-                value={productData?.category || ''}
-                onChange={(e) => handleCategoryChange('category', e.target.value)}
-                disabled={!productData?.primeCategory}
-                className="w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none disabled:opacity-50 dark:!border-white/10 dark:text-white dark:!bg-navy-800"
-              >
-                <option value="">Select Category</option>
-                {(categories || []).map((category) => (
-                  <option key={category._id || category.id} value={category.name}>{category.name}</option>
-                ))}
-              </select>
+            {showPrimeCategoryOptions && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-navy-800">
+                {filteredPrimeCategories.length > 0 ? (
+                  filteredPrimeCategories.map((prime) => (
+                    <div
+                      key={prime._id || prime.id}
+                      onClick={() => {
+                        handleCategoryChange('prime', prime._id || prime.id);
+                        setShowPrimeCategoryOptions(false);
+                      }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-navy-700 cursor-pointer"
+                    >
+                      {prime.image && <img src={prime.image} alt={prime.name} className="h-8 w-8 rounded object-cover" />}
+                      <span className="text-sm text-navy-700 dark:text-white">{prime.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No prime categories found
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="relative category-dropdown">
+            <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
+              Category *
+            </label>
+            <div className="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white/0 p-3 dark:!border-white/10 dark:!bg-navy-800">
+              {data?.category && (
+                <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                  {categories.find(c => c.name === data.category)?.image && (
+                    <img
+                      src={categories.find(c => c.name === data.category)?.image}
+                      alt={data.category}
+                      className="h-8 w-8 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-navy-700 dark:text-white font-medium truncate">{data.category}</span>
+                </div>
+              )}
+              <input
+                type="text"
+                value={categorySearch}
+                onChange={(e) => {
+                  setCategorySearch(e.target.value);
+                  setShowCategoryOptions(true);
+                }}
+                onClick={() => {
+                  setCategorySearch('');
+                  setShowCategoryOptions(true);
+                }}
+                onFocus={() => setShowCategoryOptions(true)}
+                placeholder="Search or select category..."
+                className="flex-1 bg-transparent text-sm outline-none dark:text-white"
+                disabled={!data?.primeCategoryId}
+              />
             </div>
 
-            {/* Subcategory */}
-            <div>
-              <select
-                value={productData?.subcategory || ''}
-                onChange={(e) => handleCategoryChange('subcategory', e.target.value)}
-                disabled={!productData?.category}
-                className="w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none disabled:opacity-50 dark:!border-white/10 dark:text-white dark:!bg-navy-800"
-              >
-                <option value="">Select Subcategory</option>
-                {(subcategories || []).map((subcategory) => (
-                  <option key={subcategory._id || subcategory.id} value={subcategory.name}>{subcategory.name}</option>
-                ))}
-              </select>
-            </div>
+            {showCategoryOptions && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-navy-800">
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
+                    <div
+                      key={category._id || category.id}
+                      onClick={() => {
+                        handleCategoryChange('category', category._id || category.id);
+                        setShowCategoryOptions(false);
+                      }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-navy-700 cursor-pointer"
+                    >
+                      {category.image && <img src={category.image} alt={category.name} className="h-8 w-8 rounded object-cover" />}
+                      <span className="text-sm text-navy-700 dark:text-white">{category.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No categories found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Product Description */}
-        <div>
-          <TextField
-            label="Product Description"
-            placeholder="Detailed description of your product features, benefits, and specifications..."
-            id="description"
-            cols="30"
-            rows="6"
-            value={productData?.description || ""}
-            onChange={(e) => handleInputChange('description', e.target.value)}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="relative category-dropdown">
+            <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
+              Subcategory
+            </label>
+            <div className="flex items-center gap-3 w-full rounded-xl border border-gray-200 bg-white/0 p-3 dark:!border-white/10 dark:bg-navy-800">
+              {data?.subcategory && (
+                <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                  {subcategories.find(s => s.name === data.subcategory)?.image && (
+                    <img
+                      src={subcategories.find(s => s.name === data.subcategory)?.image}
+                      alt={data.subcategory}
+                      className="h-8 w-8 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-navy-700 dark:text-white font-medium truncate">{data.subcategory}</span>
+                </div>
+              )}
+              <input
+                type="text"
+                value={subcategorySearch}
+                onChange={(e) => {
+                  setSubcategorySearch(e.target.value);
+                  setShowSubcategoryOptions(true);
+                }}
+                onClick={() => {
+                  setSubcategorySearch('');
+                  setShowSubcategoryOptions(true);
+                }}
+                onFocus={() => setShowSubcategoryOptions(true)}
+                placeholder="Search or select subcategory..."
+                className="flex-1 bg-transparent text-sm outline-none dark:text-white"
+                disabled={!data?.categoryId}
+              />
+            </div>
+
+            {showSubcategoryOptions && (
+              <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-navy-800">
+                {filteredSubcategories.length > 0 ? (
+                  filteredSubcategories.map((subcategory) => (
+                    <div
+                      key={subcategory._id || subcategory.id}
+                      onClick={() => {
+                        handleCategoryChange('subcategory', subcategory._id || subcategory.id);
+                        setShowSubcategoryOptions(false);
+                      }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-navy-700 cursor-pointer"
+                    >
+                      {subcategory.image && <img src={subcategory.image} alt={subcategory.name} className="h-8 w-8 rounded object-cover" />}
+                      <span className="text-sm text-navy-700 dark:text-white">{subcategory.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No subcategories found
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <TextField
+              label="Product Description"
+              placeholder="Detailed description of your product features, benefits, and specifications..."
+              id="description"
+              cols="30"
+              rows="6"
+              value={data?.description || ""}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <InputField
+            label="Price (Read Only)"
+            placeholder="Price"
+            id="readOnlyPrice"
+            type="text"
+            value={data?.readOnlyPrice || ""}
+            disabled={true}
+            extra="opacity-60 cursor-not-allowed"
+          />
+          <InputField
+            label="Discount (Read Only)"
+            placeholder="Discount"
+            id="readOnlyDiscount"
+            type="text"
+            value={data?.readOnlyDiscount || ""}
+            disabled={true}
+            extra="opacity-60 cursor-not-allowed"
+          />
+          <InputField
+            label="Final Price (Read Only)"
+            placeholder="Final Price"
+            id="readOnlyFinalPrice"
+            type="text"
+            value={data?.readOnlyFinalPrice || ""}
+            disabled={true}
+            extra="opacity-60 cursor-not-allowed"
           />
         </div>
 
-        {/* Product Images */}
         <div>
           <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
             Product Images
@@ -424,16 +642,16 @@ const ProductUpdate = ({ productData, onDataChange }) => {
             />
           </div>
 
-          {productData?.images && productData.images.length > 0 && (
+          {data?.images && data.images.length > 0 && (
             <div className="flex flex-col items-center">
               <h6 className="mb-3 text-sm font-bold text-navy-700 dark:text-white text-center">
-                Uploaded Images ({productData.images.length})
+                Uploaded Images ({data.images.length})
               </h6>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center max-w-2xl">
-                {productData.images.map((imageData, index) => (
+                {data.images.map((imageData, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={imageData.preview || imageData.url || imageData || `/api/uploads/${imageData}`}
+                      src={imageData.preview || imageData.file?.path || imageData}
                       alt={`Product ${index + 1}`}
                       className="h-24 w-24 rounded-lg object-cover shadow-sm"
                     />
@@ -450,16 +668,56 @@ const ProductUpdate = ({ productData, onDataChange }) => {
           )}
         </div>
 
-        {/* Product Video */}
         <div>
-          <InputField
-            label="Product Video URL (Optional)"
-            placeholder="https://youtube.com/watch?v=..."
-            id="video"
-            type="url"
-            value={productData?.video || ""}
-            onChange={(e) => handleInputChange('video', e.target.value)}
-          />
+          <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
+            Product Videos
+          </label>
+          <div className="flex w-full items-center justify-center rounded-[20px] mb-4">
+            <VideoDropZonefile
+              onDrop={onVideoDrop}
+              content={
+                <div className="flex p-10 h-[200px] w-full flex-col items-center justify-center rounded-xl border-[1px] border-dashed border-gray-200 bg-gray-100 dark:!border-none dark:!bg-navy-700">
+                  <p className="text-[60px] text-navy-700">
+                    <MdVideoLibrary className="text-brand-500 dark:text-white" />
+                  </p>
+                  <p className="text-lg font-bold text-navy-700 dark:text-white">
+                    Drop video files here, or{" "}
+                    <span className="font-bold text-brand-500 dark:text-brand-400">
+                      browse
+                    </span>
+                  </p>
+                  <p className="pt-2 text-sm text-gray-600">
+                    MP4, MOV, AVI, WebM, OGG files are allowed
+                  </p>
+                </div>
+              }
+            />
+          </div>
+
+          {data?.videos && data.videos.length > 0 && (
+            <div className="flex flex-col items-center">
+              <h6 className="mb-3 text-sm font-bold text-navy-700 dark:text-white text-center">
+                Uploaded Videos ({data.videos.length})
+              </h6>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 justify-items-center max-w-2xl">
+                {data.videos.map((videoData, index) => (
+                  <div key={index} className="relative group">
+                    <video
+                      src={videoData.preview || videoData.file?.path || videoData}
+                      controls
+                      className="h-32 w-64 rounded-lg object-cover shadow-sm"
+                    />
+                    <button
+                      onClick={() => removeVideo(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -467,24 +725,7 @@ const ProductUpdate = ({ productData, onDataChange }) => {
             <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
               Product Tags
             </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(productData?.tags || []).map((tag, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
-                >
-                  <span>{tag}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="text-brand-500 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-200"
-                  >
-                    <MdClose className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-3">
               <input
                 type="text"
                 value={newTag}
@@ -501,22 +742,92 @@ const ProductUpdate = ({ productData, onDataChange }) => {
                 <MdAdd className="h-5 w-5" />
               </button>
             </div>
+
+            {(data?.tags || []).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {(data.tags || []).map((tag, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+                  >
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="text-brand-500 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-200"
+                    >
+                      <MdClose className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* SEO Slug */}
           <div>
             <InputField
               label="SEO Slug (Auto-generated)"
               placeholder="product-url-slug"
               id="seoSlug"
               type="text"
-              value={productData?.seoSlug || productData?.slug || ""}
-              onChange={(e) => handleInputChange('seoSlug', e.target.value)}
+              value={data?.seoSlug || ""}
+              disabled={true}
+              extra="opacity-60 cursor-not-allowed"
             />
           </div>
         </div>
 
-        {/* Product Visibility */}
+        {/* Variant Information Display (Read-only) */}
+        <div>
+          <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
+            Current Variant Configuration
+          </label>
+          <div className="p-4 bg-gray-50 dark:bg-navy-800 rounded-lg">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <span className="text-sm font-medium text-navy-700 dark:text-white">Variant Mode:</span>
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    {data.variantMode === 'single' ? 'Single Variant' : 'Multi Variant'}
+                  </span>
+                </div>
+              </div>
+              
+              {data.variantMode === 'multi' && (
+                <div>
+                  <span className="text-sm font-medium text-navy-700 dark:text-white">Variant Type:</span>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      {data.selectedVariantType === 'color' ? '🎨 Color Variants' :
+                       data.selectedVariantType === 'model' ? '🏷️ Model Variants' :
+                       data.selectedVariantType === 'custom' ? '⚙️ Custom Variants' :
+                       'Auto-detected'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {data.variantMode === 'single' && (
+                <div>
+                  <span className="text-sm font-medium text-navy-700 dark:text-white">Size Matrix:</span>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                      {data.enableSizeMatrix ? 'Multiple Sizing' : 'Single Sizing'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                <strong>Note:</strong> Variant configuration is automatically detected from existing product data. 
+                Use Step 2 to modify variant details and Step 3 for inventory management.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
             Product Visibility
@@ -532,7 +843,7 @@ const ProductUpdate = ({ productData, onDataChange }) => {
                   type="radio"
                   name="visibility"
                   value={option.value}
-                  checked={productData?.visibility === option.value}
+                  checked={data?.visibility === option.value}
                   onChange={(e) => handleInputChange('visibility', e.target.value)}
                   className="text-brand-500"
                 />

@@ -1,41 +1,72 @@
 import { useState, useEffect, useCallback } from "react";
-import { MdOutlineCloudUpload, MdDelete, MdRefresh } from "react-icons/md";
+import { MdRefresh, MdClose, MdOutlineCloudUpload, MdAdd, MdDelete, MdEdit, MdSave, MdCancel, MdCheckCircle, MdWarning } from "react-icons/md";
 import Card from "components/card";
 import DropZonefile from "../../../../newProduct/components/DropZonefile";
-import InputField from "components/fields/InputField";
-
-const InventoryPricing = ({ productData, onDataChange }) => {
+const InventoryPricing = ({ data, onDataChange }) => {
   const [errors, setErrors] = useState({});
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [modalValue, setModalValue] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalPlaceholder, setModalPlaceholder] = useState('');
+  const [modalSuffix, setModalSuffix] = useState('');
 
-  // Auto-calculate final price when MRP or discount changes
+  // Store original variants data to track which were existing vs new
+  const [originalVariantIds, setOriginalVariantIds] = useState(new Set());
+
+  // Track which variants were originally existing when component first loads
+  useEffect(() => {
+    if (data.variants && data.variants.length > 0 && originalVariantIds.size === 0) {
+      const existingIds = new Set();
+      data.variants.forEach(variant => {
+        if (variant.mrp || variant.stock || variant.sku || variant.barcode) {
+          existingIds.add(variant.id);
+        }
+      });
+      setOriginalVariantIds(existingIds);
+    }
+  }, [data.variants, originalVariantIds.size]);
+
+  // Helper function to check if a variant was originally existing
+  const isExistingVariant = (variant) => {
+    return originalVariantIds.has(variant.id);
+  };
+
+  // Helper function to check if a variant is new
+  const isNewVariant = (variant) => {
+    return !originalVariantIds.has(variant.id);
+  };
+
   const calculateFinalPrice = (mrp, discount, discountedPrice) => {
     const mrpValue = parseFloat(mrp) || 0;
     const discountValue = parseFloat(discount) || 0;
     const discountedPriceValue = parseFloat(discountedPrice) || 0;
 
-    if (mrpValue === 0) return 0;
+    if (mrpValue === 0) return {
+      discount: 0,
+      discountedPrice: 0,
+      finalPrice: 0
+    };
 
-    // If discounted price is set, calculate discount percentage
     if (discountedPriceValue > 0 && discountedPriceValue < mrpValue) {
       const calculatedDiscount = ((mrpValue - discountedPriceValue) / mrpValue) * 100;
       return {
-        discount: calculatedDiscount.toFixed(2),
+        discount: Math.min(calculatedDiscount, 100).toFixed(2),
         discountedPrice: discountedPriceValue.toFixed(2),
         finalPrice: discountedPriceValue.toFixed(2)
       };
     }
 
-    // If discount percentage is set, calculate discounted price
     if (discountValue > 0) {
-      const calculatedDiscountedPrice = mrpValue - (mrpValue * (discountValue / 100));
+      const clampedDiscount = Math.min(discountValue, 100);
+      const calculatedDiscountedPrice = mrpValue - (mrpValue * (clampedDiscount / 100));
       return {
-        discount: discountValue,
+        discount: clampedDiscount.toFixed(2),
         discountedPrice: calculatedDiscountedPrice.toFixed(2),
         finalPrice: calculatedDiscountedPrice.toFixed(2)
       };
     }
 
-    // No discount
     return {
       discount: 0,
       discountedPrice: mrpValue.toFixed(2),
@@ -44,27 +75,50 @@ const InventoryPricing = ({ productData, onDataChange }) => {
   };
 
   const updateVariant = (variantId, field, value) => {
-    const updatedVariants = productData?.variants?.map(variant => {
+    const updatedVariants = data.variants.map(variant => {
       if (variant.id === variantId) {
         const updatedVariant = { ...variant, [field]: value };
         
-        // Auto-calculate pricing when MRP, discount, or discounted price changes
-        if (field === 'mrp' || field === 'discount' || field === 'discountedPrice') {
-          const calculations = calculateFinalPrice(
-            field === 'mrp' ? value : variant.mrp,
-            field === 'discount' ? value : variant.discount,
-            field === 'discountedPrice' ? value : variant.discountedPrice
-          );
+        if (field === 'mrp') {
+          const mrpValue = parseFloat(value) || 0;
+          const discountValue = parseFloat(variant.discount) || 0;
+          const discountedPriceValue = parseFloat(variant.discountedPrice) || 0;
           
-          updatedVariant.discount = calculations.discount;
-          updatedVariant.discountedPrice = calculations.discountedPrice;
-          updatedVariant.finalPrice = calculations.finalPrice;
+          if (discountValue > 0 && mrpValue > 0) {
+            const calculatedDiscountedPrice = mrpValue - (mrpValue * (discountValue / 100));
+            updatedVariant.discountedPrice = calculatedDiscountedPrice.toFixed(2);
+            updatedVariant.finalPrice = calculatedDiscountedPrice.toFixed(2);
+          } else if (discountedPriceValue > 0 && discountedPriceValue < mrpValue) {
+            const calculatedDiscount = ((mrpValue - discountedPriceValue) / mrpValue) * 100;
+            updatedVariant.discount = Math.min(calculatedDiscount, 100).toFixed(2);
+            updatedVariant.finalPrice = discountedPriceValue.toFixed(2);
+          } else {
+            updatedVariant.finalPrice = mrpValue.toFixed(2);
+          }
+        } else if (field === 'discount') {
+          const mrpValue = parseFloat(updatedVariant.mrp) || 0;
+          const discountValue = parseFloat(value) || 0;
+          if (discountValue > 0 && mrpValue > 0) {
+            const calculatedDiscountedPrice = mrpValue - (mrpValue * (discountValue / 100));
+            updatedVariant.discountedPrice = calculatedDiscountedPrice.toFixed(2);
+            updatedVariant.finalPrice = calculatedDiscountedPrice.toFixed(2);
+          } else {
+            updatedVariant.discountedPrice = mrpValue.toFixed(2);
+            updatedVariant.finalPrice = mrpValue.toFixed(2);
+          }
+        } else if (field === 'discountedPrice') {
+          const mrpValue = parseFloat(variant.mrp) || 0;
+          const discountedPriceValue = parseFloat(value) || 0;
+          if (discountedPriceValue > 0 && discountedPriceValue < mrpValue) {
+            const calculatedDiscount = ((mrpValue - discountedPriceValue) / mrpValue) * 100;
+            updatedVariant.discount = Math.min(calculatedDiscount, 100).toFixed(2);
+            updatedVariant.finalPrice = discountedPriceValue.toFixed(2);
+          }
         }
 
-        // Auto-generate SKU if empty
-        if (field === 'mrp' && !variant.sku) {
-          const skuBase = productData?.title ? productData.title.substring(0, 3).toUpperCase() : 'PRD';
-          const variantSuffix = variant.name !== 'Default' ? `-${variant.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase()}` : '';
+                if (field === 'mrp' && !variant.sku) {
+          const skuBase = data.title ? data.title.substring(0, 3).toUpperCase() : 'PRD';
+          const variantSuffix = variant.name !== 'Default' ? `-${variant.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase()}` : '';
           updatedVariant.sku = `${skuBase}${variantSuffix}-${Date.now().toString().slice(-4)}`;
         }
 
@@ -73,8 +127,28 @@ const InventoryPricing = ({ productData, onDataChange }) => {
       return variant;
     });
 
-    if (onDataChange) {
-      onDataChange({ variants: updatedVariants });
+    onDataChange({ variants: updatedVariants, fromInventoryPricing: true });
+  };
+
+
+
+  // Auto-generate SKU for a specific variant
+  const generateSKU = (variantId) => {
+    const variant = data.variants.find(v => v.id === variantId);
+    if (variant) {
+      const skuBase = data.title ? data.title.substring(0, 3).toUpperCase() : 'PRD';
+      const variantSuffix = variant.name !== 'Default' ? `-${variant.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase()}` : '';
+      const sku = `${skuBase}${variantSuffix}-${Date.now().toString().slice(-4)}`;
+      updateVariant(variantId, 'sku', sku);
+    }
+  };
+
+  // Auto-generate Barcode for a specific variant
+  const generateBarcode = (variantId) => {
+    const variant = data.variants.find(v => v.id === variantId);
+    if (variant) {
+      const barcode = `BAR${variant.id.toString().padStart(3, '0')}${Date.now().toString().slice(-6)}`;
+      updateVariant(variantId, 'barcode', barcode);
     }
   };
 
@@ -88,270 +162,631 @@ const InventoryPricing = ({ productData, onDataChange }) => {
         size: file.size
       };
       
-      updateVariant(variantId, 'image', imageData);
+      const updatedVariants = data.variants.map(variant => {
+        if (variant.id === variantId) {
+          const existingImages = variant.images || [];
+          return { ...variant, images: [...existingImages, imageData] };
+        }
+        return variant;
+      });
+      
+      onDataChange({ variants: updatedVariants, fromInventoryPricing: true });
     }
-  }, []);
+  }, [data.variants, onDataChange]);
 
-  const removeVariantImage = (variantId) => {
-    updateVariant(variantId, 'image', null);
+  const removeVariantImage = (variantId, imageIndex) => {
+    const updatedVariants = data.variants.map(variant => {
+      if (variant.id === variantId) {
+        const existingImages = variant.images || [];
+        const newImages = existingImages.filter((_, index) => index !== imageIndex);
+        return { ...variant, images: newImages };
+      }
+      return variant;
+    });
+    
+    onDataChange({ variants: updatedVariants, fromInventoryPricing: true });
   };
+
+  const openModal = (type, title, placeholder, suffix = '') => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalPlaceholder(placeholder);
+    setModalSuffix(suffix);
+    setModalValue('');
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalType('');
+    setModalValue('');
+  };
+
+  const handleModalSubmit = () => {
+    if (modalValue.trim()) {
+      if (modalType === 'mrp') {
+        autoFillAllVariants('mrp', modalValue);
+      } else if (modalType === 'stock') {
+        autoFillAllVariants('stock', modalValue);
+      } else if (modalType === 'discount') {
+        autoFillAllVariants('discount', modalValue);
+      } else if (modalType === 'discountedPrice') {
+        autoFillAllVariants('discountedPrice', modalValue);
+      }
+      closeModal();
+    }
+  };
+
+
 
   const autoFillAllVariants = (field, value) => {
-    const updatedVariants = productData?.variants?.map(variant => ({
-      ...variant,
-      [field]: value
-    }));
-    
-    if (onDataChange) {
-      onDataChange({ variants: updatedVariants });
-    }
-  };
-
-  const generateBarcodes = () => {
-    const updatedVariants = productData?.variants?.map((variant, index) => ({
-      ...variant,
-      barcode: `BAR${Date.now().toString().slice(-6)}${(index + 1).toString().padStart(3, '0')}`
-    }));
-    
-    if (onDataChange) {
-      onDataChange({ variants: updatedVariants });
-    }
-  };
-
-  const generateSKUs = () => {
-    const updatedVariants = productData?.variants?.map((variant, index) => ({
-      ...variant,
-      sku: variant.sku || `${(productData?.title || 'PRD').substring(0, 3).toUpperCase()}-${(index + 1).toString().padStart(3, '0')}`
-    }));
-    
-    if (onDataChange) {
-      onDataChange({ variants: updatedVariants });
-    }
-  };
-
-  // Ensure we have at least one variant
-  useEffect(() => {
-    if (!productData?.variants || productData.variants.length === 0) {
-      if (onDataChange) {
-        onDataChange({
-          variants: [{
-            id: 1,
-            name: 'Default',
-            sku: '',
-            mrp: '',
-            discount: '',
-            discountedPrice: '',
-            finalPrice: '',
-            stock: '',
-            barcode: '',
-            image: null,
-            variantCombination: { Default: 'Default' }
-          }]
-        });
+    const updatedVariants = data.variants.map(variant => {
+      // For MRP and Stock, only apply to new variants (those without existing data)
+      if ((field === 'mrp' || field === 'stock') && isExistingVariant(variant)) {
+        return variant; // Don't modify existing variants
       }
-    }
-  }, []);
 
-  return (
-    <div className="h-full w-full rounded-[20px] px-3 pt-7 md:px-8">
-      {/* Header */}
+      const updatedVariant = { ...variant, [field]: value };
+      
+
+      if (field === 'mrp') {
+        const mrpValue = parseFloat(value) || 0;
+        const discountValue = parseFloat(variant.discount) || 0;
+        const discountedPriceValue = parseFloat(variant.discountedPrice) || 0;
+        
+        if (discountValue > 0 && mrpValue > 0) {
+          const calculatedDiscountedPrice = mrpValue - (mrpValue * (discountValue / 100));
+          updatedVariant.discountedPrice = calculatedDiscountedPrice.toFixed(2);
+          updatedVariant.finalPrice = calculatedDiscountedPrice.toFixed(2);
+        } else if (discountedPriceValue > 0 && discountedPriceValue < mrpValue) {
+          const calculatedDiscount = ((mrpValue - discountedPriceValue) / mrpValue) * 100;
+          updatedVariant.discount = Math.min(calculatedDiscount, 100).toFixed(2);
+          updatedVariant.finalPrice = discountedPriceValue.toFixed(2);
+        } else {
+          updatedVariant.finalPrice = mrpValue.toFixed(2);
+        }
+             } else if (field === 'discount') {
+         const mrpValue = parseFloat(variant.mrp) || 0;
+         const discountValue = parseFloat(value) || 0;
+         if (discountValue > 0 && mrpValue > 0) {
+           const calculatedDiscountedPrice = mrpValue - (mrpValue * (discountValue / 100));
+           updatedVariant.discountedPrice = calculatedDiscountedPrice.toFixed(2);
+           updatedVariant.finalPrice = calculatedDiscountedPrice.toFixed(2);
+         } else {
+           updatedVariant.discountedPrice = mrpValue.toFixed(2);
+           updatedVariant.finalPrice = mrpValue.toFixed(2);
+         }
+       } else if (field === 'discountedPrice') {
+        const mrpValue = parseFloat(variant.mrp) || 0;
+        const discountedPriceValue = parseFloat(value) || 0;
+        if (discountedPriceValue > 0 && discountedPriceValue < mrpValue) {
+          const calculatedDiscount = ((mrpValue - discountedPriceValue) / mrpValue) * 100;
+          updatedVariant.discount = Math.min(calculatedDiscount, 100).toFixed(2);
+          updatedVariant.finalPrice = discountedPriceValue.toFixed(2);
+        }
+      }
+      
+      return updatedVariant;
+    });
+    onDataChange({ variants: updatedVariants, fromInventoryPricing: true });
+  };
+
+  const validateVariants = () => {
+    const newErrors = {};
+    let hasErrors = false;
+
+    data.variants.forEach(variant => {
+      const variantErrors = {};
+      
+      // Only validate new variants (those without existing data)
+      if (isNewVariant(variant)) {
+        if (!variant.mrp || parseFloat(variant.mrp) <= 0) {
+          variantErrors.mrp = 'MRP is required';
+          hasErrors = true;
+        }
+        
+        if (!variant.stock || parseInt(variant.stock) < 0) {
+          variantErrors.stock = 'Stock quantity is required for new variants';
+          hasErrors = true;
+        }
+      }
+
+      if (Object.keys(variantErrors).length > 0) {
+        newErrors[variant.id] = variantErrors;
+      }
+    });
+
+    setErrors(newErrors);
+    return !hasErrors;
+  };
+
+  useEffect(() => {
+    if (data.variants && data.variants.length > 0) {
+      validateVariants();
+    }
+  }, [data.variants]);
+
+     return (
+     <div className="h-full w-full rounded-[20px] px-3 pt-7 md:px-8 overflow-hidden">
       <h4 className="pt-[5px] text-xl font-bold text-navy-700 dark:text-white">
-        Inventory & Pricing
+        Inventory, Pricing & Variant Matrix
       </h4>
 
-      {/* Bulk Actions */}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          onClick={generateSKUs}
-          className="flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm text-white hover:bg-brand-600 dark:bg-brand-400 dark:hover:bg-brand-300"
-        >
-          <MdRefresh className="h-4 w-4" />
-          Generate SKUs
-        </button>
-        <button
-          onClick={generateBarcodes}
-          className="flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm text-white hover:bg-brand-600 dark:bg-brand-400 dark:hover:bg-brand-300"
-        >
-          <MdRefresh className="h-4 w-4" />
-          Generate Barcodes
-        </button>
+      <div className="mt-6 space-y-6">
+        <Card extra="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h6 className="text-lg font-bold text-navy-700 dark:text-white">
+              Variant Summary
+            </h6>
+            <div className="text-sm text-gray-600">
+              {data.variants?.length || 0} variant(s) to configure
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center p-3 bg-gray-50 dark:bg-navy-700 rounded-lg">
+              <div className="text-lg font-bold text-navy-700 dark:text-white">
+                {data.variants?.length || 0}
+              </div>
+              <div className="text-xs text-gray-600">Total Variants</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+              <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                {data.variants?.filter(v => isExistingVariant(v)).length || 0}
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400">Existing</div>
+            </div>
+            <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+              <div className="text-lg font-bold text-orange-700 dark:text-orange-300">
+                {data.variants?.filter(v => isNewVariant(v)).length || 0}
+              </div>
+              <div className="text-xs text-orange-600 dark:text-orange-400">New (Need Data)</div>
+            </div>
+            <div className="text-center p-3 bg-gray-50 dark:bg-navy-700 rounded-lg">
+              <div className="text-lg font-bold text-navy-700 dark:text-white">
+                {data.variants?.filter(v => v.mrp && parseFloat(v.mrp) > 0).length || 0}
+              </div>
+              <div className="text-xs text-gray-600">Priced</div>
+            </div>
+            <div className="text-center p-3 bg-gray-50 dark:bg-navy-700 rounded-lg">
+              <div className="text-lg font-bold text-navy-700 dark:text-white">
+                {data.variants?.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0) || 0}
+              </div>
+              <div className="text-xs text-gray-600">Total Stock</div>
+            </div>
+          </div>
+          
+          {/* Variant Type Breakdown */}
+          {data.variants && data.variants.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h6 className="text-sm font-bold text-navy-700 dark:text-white mb-3">Variant Breakdown:</h6>
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const variantTypes = {};
+                  data.variants.forEach(variant => {
+                    if (variant.variantType && variant.variantValue) {
+                      const key = `${variant.variantType}: ${variant.variantValue}`;
+                      if (!variantTypes[key]) {
+                        variantTypes[key] = { count: 0, sizes: new Set() };
+                      }
+                      variantTypes[key].count++;
+                      if (variant.size) {
+                        variantTypes[key].sizes.add(variant.size);
+                      }
+                    }
+                  });
+                  
+                  return Object.entries(variantTypes).map(([key, info]) => (
+                    <div key={key} className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">{key}</div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">
+                        {info.count} variant{info.count > 1 ? 's' : ''}
+                        {info.sizes.size > 0 && ` • ${Array.from(info.sizes).join(', ')}`}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Variant Matrix Table */}
+        <Card extra="p-5">
+        
+
+          <div className="flex items-center justify-between mb-4">
+            <h6 className="text-lg font-bold text-navy-700 dark:text-white">
+              Variant Matrix
+            </h6>
+            <div className="flex gap-2">
+              <button
+                onClick={() => openModal('mrp', 'Auto-fill MRP (New Variants Only)', 'Enter MRP amount', '₹')}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400"
+              >
+                Auto-fill MRP
+              </button>
+              <button
+                onClick={() => openModal('stock', 'Auto-fill Stock (New Variants Only)', 'Enter stock quantity', '')}
+                className="px-3 py-1 text-xs bg-green-100 text-green-600 rounded-lg hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
+              >
+                Auto-fill Stock
+              </button>
+              <button
+                onClick={() => openModal('discount', 'Auto-fill Discount (All Variants)', 'Enter discount percentage', '%')}
+                className="px-3 py-1 text-xs bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400"
+              >
+                Auto-fill Discount
+              </button>
+              <button
+                onClick={() => openModal('discountedPrice', 'Auto-fill Discounted Price (All Variants)', 'Enter discounted price', '₹')}
+                className="px-3 py-1 text-xs bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400"
+              >
+                Auto-fill Discounted Price
+              </button>
+            </div>
+          </div>
+
+                     {/* Responsive Table */}
+           <div className="overflow-x-auto max-w-full">
+             <table className="w-full min-w-[1200px]">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[120px]">
+                    Variant
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[100px]">
+                    MRP (₹) <span className="text-orange-500">*</span>
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[100px]">
+                    Discount %
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[120px]">
+                    Discounted Price (₹)
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[100px]">
+                    Final Price (₹)
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[100px]">
+                    Stock Qty <span className="text-orange-500">*</span>
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[120px]">
+                    SKU Code
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[120px]">
+                    Barcode
+                  </th>
+                  <th className="text-left p-3 text-sm font-bold text-gray-600 dark:text-white min-w-[120px]">
+                    Images
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.variants || []).map((variant) => (
+                  <tr key={variant.id} className="border-b border-gray-100 dark:border-gray-800">
+                    {/* Variant Name */}
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-navy-700 dark:text-white">
+                          {variant.name}
+                        </div>
+                        {/* {isExistingVariant(variant) ? (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded-full">
+                            <MdCheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
+                            <span className="text-xs text-green-600 dark:text-green-400">Existing</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                            <MdWarning className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                            <span className="text-xs text-orange-600 dark:text-orange-400">New</span>
+                          </div>
+                        )} */}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        ID: #{variant.id}
+                        {variant.variantType && variant.variantValue && (
+                          <span className="block">
+                            {variant.variantType}: {variant.variantValue}
+                            {variant.size && ` - Size: ${variant.size}`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* MRP */}
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        value={variant.mrp}
+                        onChange={(e) => updateVariant(variant.id, 'mrp', e.target.value)}
+                        placeholder={isExistingVariant(variant) ? "Pre-filled" : "Required"}
+                        className={`w-full p-2 text-sm border rounded-lg outline-none dark:bg-navy-800 dark:text-white ${
+                          errors[variant.id]?.mrp 
+                            ? 'border-red-500 dark:border-red-500' 
+                            : isExistingVariant(variant)
+                            ? 'border-green-300 dark:border-green-600'
+                            : 'border-orange-300 dark:border-orange-600'
+                        }`}
+                      />
+                      {errors[variant.id]?.mrp && (
+                        <div className="text-xs text-red-500 mt-1">{errors[variant.id].mrp}</div>
+                      )}
+                      {!variant.mrp && isNewVariant(variant) && (
+                        <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">Required for new variants</div>
+                      )}
+                    </td>
+
+                    {/* Discount % */}
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        value={variant.discount}
+                                                 onChange={(e) => {
+                           const value = Math.min(parseFloat(e.target.value) || 0, 100);
+                           updateVariant(variant.id, 'discount', value);
+                         }}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        className="w-full p-2 text-sm border border-gray-200 dark:border-white/10 rounded-lg outline-none dark:bg-navy-800 dark:text-white"
+                      />
+                                             <div className="text-xs text-gray-500 mt-1">
+                         Max: 100%
+                       </div>
+                    </td>
+
+                    {/* Discounted Price */}
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        value={variant.discountedPrice}
+                        onChange={(e) => {
+                          const mrpValue = parseFloat(variant.mrp) || 0;
+                          const discountedValue = parseFloat(e.target.value) || 0;
+                          const clampedValue = Math.min(discountedValue, mrpValue);
+                          updateVariant(variant.id, 'discountedPrice', clampedValue);
+                        }}
+                        placeholder="0.00"
+                        max={variant.mrp || undefined}
+                        className="w-full p-2 text-sm border border-gray-200 dark:border-white/10 rounded-lg outline-none dark:bg-navy-800 dark:text-white"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        Max: ₹{variant.mrp || '0.00'}
+                      </div>
+                    </td>
+
+                    {/* Final Price (Read-only) */}
+                    <td className="p-3">
+                      <div className="p-2 bg-gray-50 dark:bg-navy-700 rounded-lg text-sm font-medium text-navy-700 dark:text-white">
+                        ₹{variant.finalPrice || '0.00'}
+                      </div>
+                    </td>
+
+                    {/* Stock Quantity */}
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        value={variant.stock}
+                        onChange={(e) => updateVariant(variant.id, 'stock', e.target.value)}
+                        placeholder={isExistingVariant(variant) ? "Pre-filled" : "Required"}
+                        min="0"
+                        className={`w-full p-2 text-sm border rounded-lg outline-none dark:bg-navy-800 dark:text-white ${
+                          errors[variant.id]?.stock 
+                            ? 'border-red-500 dark:border-red-500' 
+                            : isExistingVariant(variant)
+                            ? 'border-green-300 dark:border-green-600'
+                            : 'border-orange-300 dark:border-orange-600'
+                        }`}
+                      />
+                      {errors[variant.id]?.stock && (
+                        <div className="text-xs text-red-500 mt-1">{errors[variant.id].stock}</div>
+                      )}
+                      {!variant.stock && isNewVariant(variant) && (
+                        <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">Required for new variants</div>
+                      )}
+                    </td>
+
+                    {/* SKU Code */}
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={variant.sku}
+                          onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
+                          placeholder="Auto-generated"
+                          className="flex-1 p-2 text-sm border border-gray-200 dark:border-white/10 rounded-lg outline-none dark:bg-navy-800 dark:text-white"
+                        />
+                        <button
+                          onClick={() => generateSKU(variant.id)}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400"
+                          title="Auto-generate SKU"
+                        >
+                          🔄
+                        </button>
+                      </div>
+                    </td>
+
+                    {/* Barcode */}
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={variant.barcode}
+                          onChange={(e) => updateVariant(variant.id, 'barcode', e.target.value)}
+                          placeholder="Optional"
+                          className="flex-1 p-2 text-sm border border-gray-200 dark:border-white/10 rounded-lg outline-none dark:bg-navy-800 dark:text-white"
+                        />
+                        <button
+                          onClick={() => generateBarcode(variant.id)}
+                          className="px-2 py-1 text-xs bg-green-100 text-green-600 rounded hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
+                          title="Auto-generate Barcode"
+                        >
+                          🔄
+                        </button>
+                      </div>
+                    </td>
+
+                                                              {/* Variant Images */}
+                     <td className="p-3">
+                       {variant.images && variant.images.length > 0 ? (
+                         <div className="relative group">
+                           <img
+                             src={variant.images[0].preview}
+                             alt={`Variant ${variant.name}`}
+                             className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm cursor-pointer"
+                             onClick={() => {
+                               const input = document.createElement('input');
+                               input.type = 'file';
+                               input.accept = 'image/*';
+                               input.onchange = (e) => {
+                                 if (e.target.files && e.target.files[0]) {
+                                   onImageDrop([e.target.files[0]], variant.id);
+                                 }
+                               };
+                               input.click();
+                             }}
+                           />
+                           <button
+                             onClick={() => removeVariantImage(variant.id, 0)}
+                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                             title="Remove image"
+                           >
+                             ×
+                           </button>
+                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg"></div>
+                         </div>
+                       ) : (
+                         <DropZonefile
+                           onDrop={(files) => onImageDrop(files, variant.id)}
+                           content={
+                             <div className="flex h-16 w-16 flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-navy-700 hover:border-blue-400 transition-colors cursor-pointer">
+                               <MdOutlineCloudUpload className="text-gray-400 text-lg" />
+                               <span className="text-xs text-gray-400">Add</span>
+                             </div>
+                           }
+                         />
+                       )}
+                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+
+          {(!data.variants || data.variants.length === 0) && (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <MdRefresh className="h-12 w-12 mx-auto" />
+              </div>
+              <p className="text-gray-600 dark:text-gray-400">
+                No variants configured. Please go back to Step 2 to configure variants.
+              </p>
+            </div>
+          )}
+        </Card>
+
+
+        {data.variants && data.variants.length > 0 && (
+          <Card extra="p-5">
+            <h6 className="mb-4 text-lg font-bold text-navy-700 dark:text-white">
+              Pricing Summary
+            </h6>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-sm text-blue-600 dark:text-blue-400">Lowest Price</div>
+                <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                  ₹{Math.min(...data.variants.map(v => parseFloat(v.finalPrice) || 0)).toFixed(2)}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-sm text-green-600 dark:text-green-400">Highest Price</div>
+                <div className="text-xl font-bold text-green-700 dark:text-green-300">
+                  ₹{Math.max(...data.variants.map(v => parseFloat(v.finalPrice) || 0)).toFixed(2)}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <div className="text-sm text-purple-600 dark:text-purple-400">Average Price</div>
+                <div className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                  ₹{(data.variants.reduce((sum, v) => sum + (parseFloat(v.finalPrice) || 0), 0) / (data.variants.length || 1)).toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
-      {/* Variants Table */}
-      <div className="mt-6">
-        <Card extra="p-4">
-          <h6 className="mb-4 text-sm font-bold text-navy-700 dark:text-white">
-            Variant Details
-          </h6>
-          
-          <div className="space-y-4">
-            {(productData?.variants || []).map((variant, index) => (
-              <div key={variant.id} className="rounded-lg border border-gray-200 p-4 dark:border-white/10">
-                <div className="mb-4 flex items-center justify-between">
-                  <h6 className="text-sm font-medium text-navy-700 dark:text-white">
-                    {variant.name}
-                  </h6>
-                  {variant.image && (
-                    <div className="relative">
-                      <img
-                        src={variant.image.preview || variant.image.url || variant.image}
-                        alt={variant.name}
-                        className="h-16 w-16 rounded-lg object-cover"
-                      />
-                      <button
-                        onClick={() => removeVariantImage(variant.id)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                      >
-                        ×
-                      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100">
+
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-navy-700 dark:text-white">
+                {modalTitle}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <MdClose className="h-6 w-6" />
+              </button>
+            </div>
+
+
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {modalTitle}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={modalValue}
+                    onChange={(e) => setModalValue(e.target.value)}
+                    placeholder={modalPlaceholder}
+                    className="w-full p-3 text-lg border border-gray-300 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-navy-700 dark:text-white dark:border-gray-600"
+                    autoFocus
+                    onKeyPress={(e) => e.key === 'Enter' && handleModalSubmit()}
+                  />
+                  {modalSuffix && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                      {modalSuffix}
                     </div>
                   )}
                 </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {/* SKU */}
-                  <div>
-                    <InputField
-                      label="SKU"
-                      placeholder="Product SKU"
-                      id={`sku-${variant.id}`}
-                      type="text"
-                      value={variant.sku || ""}
-                      onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
-                    />
-                  </div>
-
-                  {/* MRP */}
-                  <div>
-                    <InputField
-                      label="MRP"
-                      placeholder="0.00"
-                      id={`mrp-${variant.id}`}
-                      type="number"
-                      value={variant.mrp || ""}
-                      onChange={(e) => updateVariant(variant.id, 'mrp', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Discount */}
-                  <div>
-                    <InputField
-                      label="Discount (%)"
-                      placeholder="0"
-                      id={`discount-${variant.id}`}
-                      type="number"
-                      value={variant.discount || ""}
-                      onChange={(e) => updateVariant(variant.id, 'discount', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Discounted Price */}
-                  <div>
-                    <InputField
-                      label="Discounted Price"
-                      placeholder="0.00"
-                      id={`discountedPrice-${variant.id}`}
-                      type="number"
-                      value={variant.discountedPrice || ""}
-                      onChange={(e) => updateVariant(variant.id, 'discountedPrice', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Final Price */}
-                  <div>
-                    <InputField
-                      label="Final Price"
-                      placeholder="0.00"
-                      id={`finalPrice-${variant.id}`}
-                      type="number"
-                      value={variant.finalPrice || ""}
-                      onChange={(e) => updateVariant(variant.id, 'finalPrice', e.target.value)}
-                      disabled
-                    />
-                  </div>
-
-                  {/* Stock */}
-                  <div>
-                    <InputField
-                      label="Stock Quantity"
-                      placeholder="0"
-                      id={`stock-${variant.id}`}
-                      type="number"
-                      value={variant.stock || ""}
-                      onChange={(e) => updateVariant(variant.id, 'stock', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Barcode */}
-                  <div>
-                    <InputField
-                      label="Barcode"
-                      placeholder="Product barcode"
-                      id={`barcode-${variant.id}`}
-                      type="text"
-                      value={variant.barcode || ""}
-                      onChange={(e) => updateVariant(variant.id, 'barcode', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Variant Image Upload */}
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <label className="ml-3 mb-2 text-sm font-bold text-navy-700 dark:text-white">
-                      Variant Image
-                    </label>
-                    <div className="flex w-full items-center justify-center rounded-[20px]">
-                      <DropZonefile
-                        onDrop={(files) => onImageDrop(files, variant.id)}
-                        content={
-                          <div className="flex h-[120px] w-full flex-col items-center justify-center rounded-xl border-[1px] border-dashed border-gray-200 bg-gray-100 dark:!border-none dark:!bg-navy-700">
-                            <p className="text-[40px] text-navy-700">
-                              <MdOutlineCloudUpload className="text-brand-500 dark:text-white" />
-                            </p>
-                            <p className="text-sm font-bold text-navy-700 dark:text-white">
-                              Drop variant image here
-                            </p>
-                          </div>
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+              
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                {modalType === 'mrp' || modalType === 'stock' 
+                  ? `This value will be applied to ${data.variants?.filter(v => isNewVariant(v)).length || 0} new variant(s) only.`
+                  : `This value will be applied to all ${data.variants?.length || 0} variant(s).`
+                }
+              </p>
+            </div>
 
-      {/* Summary */}
-      <div className="mt-6">
-        <Card extra="p-4">
-          <h6 className="mb-4 text-sm font-bold text-navy-700 dark:text-white">
-            Summary
-          </h6>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-brand-500">
-                {productData?.variants?.length || 0}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Total Variants</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-500">
-                {productData?.variants?.filter(v => parseFloat(v.stock) > 0).length || 0}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">In Stock</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-500">
-                {productData?.variants?.filter(v => parseFloat(v.stock) === 0).length || 0}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Out of Stock</p>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={closeModal}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleModalSubmit}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium"
+              >
+                Apply to All
+              </button>
             </div>
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
-
 export default InventoryPricing;

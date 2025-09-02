@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-export default function StepperControl({ handleClick, currentStep, steps, onFinish, productData, canProceed }) {
+export default function StepperControl({ handleClick, currentStep, steps, onFinish, productData, canProceed, mode = 'create' }) {
   const isLastStep = currentStep === steps.length;
   const [submitting, setSubmitting] = useState(false);
+  
+  // Dynamic text based on mode
+  const getButtonText = () => {
+    if (mode === 'update') {
+      return submitting ? "Updating..." : "Update Product";
+    } else {
+      return submitting ? "Creating..." : "Create Product";
+    }
+  };
   
   const handleNext = async () => {
     if (isLastStep) {
@@ -64,7 +73,7 @@ export default function StepperControl({ handleClick, currentStep, steps, onFini
         }`}
         disabled={submitting || (!canProceed && !isLastStep)}
       >
-        {isLastStep ? (submitting ? "Adding..." : "Create Product") : "Next"}
+        {isLastStep ? getButtonText() : "Next"}
       </button>
     </div>
   );

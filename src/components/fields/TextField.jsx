@@ -2,7 +2,7 @@
 import React from "react";
 
 function InputField(props) {
-  const { label, id, extra, placeholder, cols, rows, state, disabled } = props;
+  const { label, id, extra, placeholder, cols, rows, state, disabled, onChange, value } = props;
 
   return (
     <div className={`${extra}`}>
@@ -17,6 +17,8 @@ function InputField(props) {
           cols={cols}
           rows={rows}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
           className={`flex w-full items-center justify-center rounded-xl border bg-white/0 pl-3 pt-3 text-sm outline-none ${
             disabled === true
               ? "!border-none !bg-gray-100 dark:!bg-white/5 dark:placeholder:!text-[rgba(255,255,255,0.15)]"

@@ -336,30 +336,7 @@ function ProductTable(props) {
                           </div>
       ),
     }),
-    columnHelper.accessor("discountedPrice", {
-      id: "discountedPrice",
-      header: () => (
-        <p className="text-sm font-bold text-gray-600 dark:text-white">DISCOUNTED PRICE</p>
-      ),
-      cell: (info) => (
-        <div>
-          {info.getValue() ? (
-            <div>
-              <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                ${info.getValue()}
-              </p>
-              <p className="text-xs text-green-500">
-                Save ${info.row.original.price - info.getValue()}
-              </p>
-                          </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No discount
-            </p>
-          )}
-                          </div>
-      ),
-    }),
+   
     columnHelper.accessor("stock", {
       id: "stock",
       header: () => (

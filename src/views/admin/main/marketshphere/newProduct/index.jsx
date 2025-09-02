@@ -14,7 +14,6 @@ const ProductNew = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [productData, setProductData] = useState({
-    // Step 1: Basic Product Details
     title: '',
     subtitle: '',
     brand: '',
@@ -24,27 +23,25 @@ const ProductNew = () => {
     subcategory: '',
     description: '',
     images: [],
-    video: '',
+    videos: [],
     tags: [],
     seoSlug: '',
-    visibility: 'public', // 'public', 'draft', 'private'
-    
-    // Step 2: Variant Configuration
-    variantMode: 'single', // 'single' or 'multi'
-    variantTypes: [], // e.g., [{ type: 'Color', values: ['Red', 'Blue'] }]
+    visibility: 'public',
+    variantMode: 'single',
+    selectedVariantType: 'color', // Default to color for multi variant
+    variantTypes: [],
+    colorValues: '',
+    modelValues: '',
+    customVariantName: '',
+    customVariantValues: '',
     enableSizeMatrix: false,
-    sizes: [], // e.g., ['S', 'M', 'L', 'XL']
-    
-    // Step 3: Inventory, Pricing, Variant Matrix
-    variants: [], // Generated matrix based on Step 2
-    
-    // Legacy fields for backward compatibility
+    sizes: [],
+    variants: [],
     name: '',
     weight: '',
     color: '',
     collection: '',
     coverImage: '',
-    videos: [],
     price: '',
     currency: 'usd'
   });
@@ -72,7 +69,10 @@ const ProductNew = () => {
                productData.subcategory;
       case 2:
         if (productData.variantMode === 'single') return true;
-        return productData.variantTypes.length > 0;
+        // For multi variant, require selectedVariantType
+        return productData.selectedVariantType;
+      case 3:
+        return true;
       default:
         return true;
     }
@@ -111,51 +111,16 @@ const ProductNew = () => {
   const { createProduct } = useProductApiStore();
 
   const handleFinish = async () => {
-    // Create the product object
-    const newProduct = {
-      id: Date.now().toString(), // Temporary ID, will be replaced by MongoDB _id
-      sku: `SKU-${Date.now()}`, // Auto-generate SKU
-      name: productData.title,
-      subtitle: productData.subtitle,
-      brand: productData.brand,
-      description: productData.description,
-      image: productData.coverImage || (productData.images && productData.images.length > 0 ? productData.images[0].preview : 'https://via.placeholder.com/100'),
-      primeCategory: productData.primeCategory,
-      category: productData.category,
-      subcategory: productData.subcategory,
-      price: productData.variants.length > 0 ? productData.variants[0].finalPrice : parseFloat(productData.price) || 0,
-      discountedPrice: null,
-      stock: productData.variants.length > 0 ? productData.variants.reduce((total, variant) => total + (variant.stock || 0), 0) : 0,
-      dateAdded: new Date().toISOString().split('T')[0],
-      status: "Active",
-      visibility: productData.visibility,
-      currency: productData.currency,
-      tags: productData.tags,
-      seoSlug: productData.seoSlug,
-      images: productData.images || [],
-      variants: productData.variants,
-      variantMode: productData.variantMode,
-      variantTypes: productData.variantTypes,
-      enableSizeMatrix: productData.enableSizeMatrix,
-      sizes: productData.sizes
-    };
-
     try {
-      console.log('Collected productData (all form inputs):', productData);
       if (Array.isArray(productData?.variants)) {
-        console.log('Collected variants count:', productData.variants.length);
         console.table(productData.variants);
       }
 
-      // Send to backend API
       const created = await createProduct(productData);
-      console.log('New product created (API response):', created);
 
-      // Toast success with backend message if available
       const successMessage = created?.message || 'Product created successfully!';
       toast.success(successMessage);
 
-      // Navigate back to product management with success message
       navigate('/admin/main/marketsphere/product-management', {
         state: { 
           newProduct: created?.data || created,
@@ -163,7 +128,6 @@ const ProductNew = () => {
         }
       });
     } catch (error) {
-      console.error('Failed to create product:', error);
       const errMsg = error?.response?.data?.message || 'Failed to create product. Please check console for details.';
       toast.error(errMsg);
     }
@@ -194,6 +158,7 @@ const ProductNew = () => {
             onFinish={handleFinish}
             productData={productData}
             canProceed={canProceedToNextStep(currentStep)}
+            mode="create"
           />
         </Card>
       </div>
