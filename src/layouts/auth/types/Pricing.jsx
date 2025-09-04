@@ -12,13 +12,14 @@ import Sidebar from "components/sidebar";
 
 function Pricing() {
   const [open, setOpen] = React.useState(true);
+  const [hovered, setHovered] = React.useState(false);
   const [activeButton, setActiveButton] = useState("monthly");
   return (
     // pricing page
     <div className="relative h-full w-full px-3 font-dm dark:bg-navy-900">
-      <div className="w-100% -z-1 absolute left-0 right-0 max-h-[60vh] min-h-[60vh] overflow-hidden bg-gradient-to-br from-brand-400 to-brand-600 bg-cover bg-no-repeat md:mx-auto" />
+<div className="w-100% -z-1 absolute left-0 right-0 max-h-[60vh] min-h-[60vh] overflow-hidden bg-gradient-to-br from-brand-400 to-brand-600 bg-cover bg-no-repeat md:mx-auto" />
 
-      <Sidebar variant="auth" open={open} onClose={() => setOpen(false)} />
+      <Sidebar variant="auth" open={open} onClose={() => setOpen(false)} hovered={hovered} setHovered={setHovered} />
       <div className="z-1 relative">
         <NavbarAuth onOpenSidenav={() => setOpen(!open)} />
         {/* Header content */}

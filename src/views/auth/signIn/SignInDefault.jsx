@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import InputField from 'components/fields/InputField';
+import PasswordField from 'components/fields/PasswordField';
 import Default from 'layouts/auth/types/Default';
 import { FcGoogle } from 'react-icons/fc';
 import Checkbox from 'components/checkbox';
@@ -11,7 +12,8 @@ function SignInDefault() {
   const [password, setPassword] = useState('');
   var navigate = useNavigate();
   
-  const handleSignIn = async () => {
+  const handleSignIn = async (e) => {
+    e.preventDefault(); // Prevent form submission and page refresh
     if (!email.trim() || !password.trim()) {
       alert('Please enter email and password.');
       return;
@@ -35,6 +37,7 @@ function SignInDefault() {
             <p className="mb-9 ml-1 text-base text-gray-600">
               Enter your email and password to sign in!
             </p>
+            <form onSubmit={handleSignIn}>
 
             {/* <div className="mb-6 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-lightPrimary hover:cursor-pointer dark:bg-navy-800 dark:text-white">
               <div className="rounded-full text-xl">
@@ -64,13 +67,12 @@ function SignInDefault() {
             />
 
             {/* Password Input */}
-            <InputField
+            <PasswordField
               variant="auth"
               extra="mb-3"
               label="Password*"
               placeholder="Min. 8 characters"
               id="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -93,7 +95,7 @@ function SignInDefault() {
 
             {/* Sign In Button */}
             <button
-              onClick={handleSignIn}
+              type="submit"
               disabled={loading}
               className={`w-full rounded-xl py-3 text-base font-medium text-white transition duration-200 ${
                 loading
@@ -103,6 +105,7 @@ function SignInDefault() {
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
+            </form>
 
             {/* <div className="mt-4">
               <span className="text-sm font-medium text-navy-700 dark:text-gray-500">

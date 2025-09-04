@@ -40,8 +40,11 @@ import RolePermissionEditor from 'views/admin/main/userManagement/components/Rol
 import RolesPermissions from 'views/admin/main/userManagement/RolesPermissions';
 import Customers from 'views/admin/main/userManagement/Customers';
 import Sellers from 'views/admin/main/userManagement/Sellers';
+import SellerDetail from 'views/admin/main/userManagement/SellerDetail';
+import BecomeASeller from 'views/admin/main/userManagement/BecomeASeller';
 import Riders from 'views/admin/main/userManagement/Riders';
 import EditUser from 'views/admin/main/userManagement/editUser';
+import UserDetail from 'views/admin/main/userManagement/UserDetail';
 
 import ProfileSettings from 'views/admin/main/profile/settings';
 import ProfileOverview from 'views/admin/main/profile/overview';
@@ -400,6 +403,13 @@ const routes = [
             component: <UsersList />,
           },
           {
+            name: 'Become a Seller',
+            layout: '/admin',
+            path: '/main/userManagement/become-a-seller',
+            exact: false,
+            component: <BecomeASeller />,
+          },
+          {
             name: 'Customers',
             layout: '/admin',
             path: '/main/userManagement/customers',
@@ -414,6 +424,13 @@ const routes = [
             component: <Sellers />,
           },
           {
+            name: 'Seller Detail',
+            layout: '/admin',
+            path: '/main/userManagement/sellers/:id',
+            exact: false,
+            component: <SellerDetail />,
+          },
+          {
             name: 'Riders',
             layout: '/admin',
             path: '/main/userManagement/riders',
@@ -421,12 +438,20 @@ const routes = [
             component: <Riders />,
           },
           {
-            name: 'View User',
+            name: 'Edit User',
             layout: '/admin',
             path: '/main/userManagement/edit-user/:id',
             exact: false,
             component: <EditUser />,
-            hide: true, // Hide from navigation menu
+            hide: true,
+          },
+          {
+            name: 'User Detail',
+            layout: '/admin',
+            path: '/main/userManagement/user-detail/:id',
+            exact: false,
+            component: <UserDetail />,
+            hide: true,
           },
         ],
       },

@@ -65,15 +65,18 @@ export const useAuthStore = create((set) => ({
   login: async ({ email, password, navigate }) => {
     set({ loading: true });
     try {
-      const res = await axios.post('/auth/login', {
+      const res = await axios.post('/auth/admin-seller/login', {
         emailOrPhone: email,
         password,
       });
 
-      const token = res.data.user.token;
-      const user = res.data.user;
+      const token = res.data.data.token;
+      const user = res.data.data.user;
 
+      // Set axios auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Save to localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
@@ -90,6 +93,7 @@ export const useAuthStore = create((set) => ({
     const user = localStorage.getItem('user');
 
     if (token && user) {
+      // Set axios auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       set({ user: JSON.parse(user), isInitialized: true });
     } else {
@@ -97,11 +101,18 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  logout: () => {
+  logout: (navigate) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Remove axios auth header
     delete axios.defaults.headers.common['Authorization'];
     set({ user: null });
+    
+    toast.success('Successfully logged out!');
+    
+    if (navigate) {
+      navigate('/auth/sign-in/default#/auth/sign-in/centered');
+    }
   },
 }));
 

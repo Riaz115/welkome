@@ -1,7 +1,7 @@
 import React from "react";
 import Dropdown from "components/dropdown";
 import { FiAlignJustify } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";
 import Configurator from "./Configurator";
 // import { RiMoonFill, RiSunFill } from 'react-icons/ri';
@@ -10,6 +10,7 @@ import {
   IoMdNotificationsOutline,
 } from "react-icons/io";
 import avatar from "assets/img/avatars/avatar4.png";
+import { useAuthStore } from "stores/useAuthStore";
 
 const Navbar = (props) => {
   const {
@@ -24,6 +25,13 @@ const Navbar = (props) => {
   const [darkmode, setDarkmode] = React.useState(
     document.body.classList.contains("dark")
   );
+  
+  const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+  
+  const handleLogout = () => {
+    logout(navigate);
+  };
   return (
     <nav
       className={`duration-175 linear fixed top-3 right-3 flex flex-row flex-wrap items-center justify-between rounded-xl bg-white/30 transition-all ${
@@ -160,7 +168,7 @@ const Navbar = (props) => {
               <div className="mt-3 ml-4">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-navy-700 dark:text-white">
-                    👋 Hey, Lawrence
+                    👋 Hey, {user?.name || user?.firstName || 'User'}
                   </p>{" "}
                 </div>
               </div>
@@ -174,12 +182,12 @@ const Navbar = (props) => {
                   Profile Settings
                 </Link>
                
-                <a
-                  href=" "
-                  className="mt-3 text-sm font-medium text-red-500 hover:text-red-500"
+                <button
+                  onClick={handleLogout}
+                  className="mt-3 text-sm font-medium text-red-500 hover:text-red-500 cursor-pointer"
                 >
                   Log Out
-                </a>
+                </button>
               </div>
             </div>
           }

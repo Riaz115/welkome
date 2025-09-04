@@ -1,81 +1,140 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "components/card";
 import SearchTableUsers from "./components/SearchTableUsers";
 import { createColumnHelper } from "@tanstack/react-table";
 import { MdVerified, MdBlock, MdClose, MdVisibility, MdEdit, MdMoreVert, MdStore, MdPending, MdCheckCircle, MdCancel } from "react-icons/md";
 import { IoFilterSharp } from "react-icons/io5";
-import sellersData, { statusOptions } from "./variables/sellersData";
+import useSellerApiStore from "stores/useSellerApiStore";
+import { toast } from "react-toastify";
 
 const columnHelper = createColumnHelper();
 
 const Sellers = () => {
+  const navigate = useNavigate();
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedSeller, setSelectedSeller] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  
+  const { 
+    sellers, 
+    loading, 
+    error, 
+    getSellers, 
+    approveSeller,
+    rejectSeller
+  } = useSellerApiStore();
+
+  // Fetch sellers on component mount
+  useEffect(() => {
+    const fetchSellers = async () => {
+      try {
+        await getSellers();
+      } catch (error) {
+        // Handle 403 errors silently - don't show error UI for permission issues
+        if (error?.response?.status === 403) {
+          console.warn('Access denied: Insufficient permissions to view sellers');
+          return;
+        }
+        // For other errors, let the error state handle it
+        console.error('Error fetching sellers:', error);
+      }
+    };
+    
+    fetchSellers();
+  }, [getSellers]);
+
+  // Ensure sellers is always an array
+  const sellersArray = Array.isArray(sellers) ? sellers : [];
 
   // Filter sellers based on selected status
   const filteredSellers = useMemo(() => {
     if (selectedStatus === "all") {
-      return sellersData;
+      return sellersArray;
     }
-    return sellersData.filter(seller => seller.status === selectedStatus);
-  }, [selectedStatus]);
+    return sellersArray.filter(seller => seller.verificationStatus === selectedStatus);
+  }, [sellersArray, selectedStatus]);
 
   // Calculate stats for each status
   const getStatusStats = () => {
     return {
-      total: sellersData.length,
-      requested: sellersData.filter(s => s.status === "requested").length,
-      verified: sellersData.filter(s => s.status === "verified").length,
-      blocked: sellersData.filter(s => s.status === "blocked").length,
-      declined: sellersData.filter(s => s.status === "declined").length
+      total: sellersArray.length,
+      pending: sellersArray.filter(s => s.verificationStatus === "pending").length,
+      approved: sellersArray.filter(s => s.verificationStatus === "approved").length,
+      rejected: sellersArray.filter(s => s.verificationStatus === "rejected").length
     };
   };
 
   const stats = getStatusStats();
+
+  // Status options for filtering
+  const statusOptions = [
+    { value: "all", label: "All Sellers", count: stats.total },
+    { value: "pending", label: "Pending", count: stats.pending },
+    { value: "approved", label: "Approved", count: stats.approved },
+    { value: "rejected", label: "Rejected", count: stats.rejected }
+  ];
 
   const handleDropdownToggle = (rowIndex, event) => {
     event.stopPropagation();
     setDropdownOpen(dropdownOpen === rowIndex ? null : rowIndex);
   };
 
-  const handleAction = (action, seller) => {
-    console.log(`${action} action for seller:`, seller);
+  const handleAction = async (action, seller) => {
     setDropdownOpen(null);
     
-    switch(action) {
-      case 'verify':
-        // Handle verification logic
-        console.log(`Verifying seller: ${seller.name[0]}`);
-        break;
-      case 'block':
-        // Handle blocking logic
-        console.log(`Blocking seller: ${seller.name[0]}`);
-        break;
-      case 'unblock':
-        // Handle unblocking logic
-        console.log(`Unblocking seller: ${seller.name[0]}`);
-        break;
-      case 'decline':
-        // Handle declining logic
-        console.log(`Declining seller: ${seller.name[0]}`);
-        break;
-      case 'view':
-        // Handle view details
-        console.log(`Viewing seller details: ${seller.name[0]}`);
-        break;
-      case 'edit':
-        // Handle edit seller
-        console.log(`Editing seller: ${seller.name[0]}`);
-        break;
-      default:
-        break;
+    try {
+      switch(action) {
+        case 'approve':
+          setActionLoading(true);
+          await approveSeller(seller._id);
+          toast.success(`Seller ${seller.businessName} has been approved successfully!`);
+          setActionLoading(false);
+          break;
+        case 'reject':
+          setSelectedSeller(seller);
+          setShowRejectModal(true);
+          break;
+        case 'view':
+          // Navigate to seller detail page
+          navigate(`/admin/main/userManagement/sellers/${seller._id}`);
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to update seller status');
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await rejectSeller(selectedSeller._id, rejectionReason);
+      toast.success(`Seller ${selectedSeller.businessName} has been rejected.`);
+      setShowRejectModal(false);
+      setRejectionReason('');
+      setSelectedSeller(null);
+      setActionLoading(false);
+    } catch (error) {
+      toast.error('Failed to reject seller');
+      setActionLoading(false);
     }
   };
 
   // Table columns configuration
   const sellersColumns = [
-    columnHelper.accessor("name", {
-      id: "name",
+    columnHelper.accessor("businessName", {
+      id: "businessName",
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">
           SELLER
@@ -84,18 +143,16 @@ const Sellers = () => {
       cell: (info) => (
         <div className="flex w-full items-center gap-[14px]">
           <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-blue-300">
-            <img
-              className="h-full w-full rounded-full object-cover"
-              src={info.getValue()[1]}
-              alt=""
-            />
+            <span className="text-white font-bold text-lg">
+              {info.row.original.businessName?.charAt(0) || 'S'}
+            </span>
           </div>
           <div className="flex flex-col">
             <p className="font-semibold text-navy-700 dark:text-white text-sm">
-              {info.getValue()[0]}
+              {info.getValue()}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {info.row.original.ownerName}
+              {info.row.original.name}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
               {info.row.original.businessType}
@@ -128,8 +185,8 @@ const Sellers = () => {
         </p>
       ),
     }),
-    columnHelper.accessor("status", {
-      id: "status",
+    columnHelper.accessor("verificationStatus", {
+      id: "verificationStatus",
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">
           STATUS
@@ -139,35 +196,29 @@ const Sellers = () => {
         const status = info.getValue();
         const getStatusConfig = (status) => {
           switch (status) {
-            case "verified":
+            case "approved":
               return {
                 className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
                 icon: <MdCheckCircle className="w-3 h-3" />,
-                label: "Verified"
+                label: "Approved"
               };
-            case "requested":
+            case "pending":
               return {
                 className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
                 icon: <MdPending className="w-3 h-3" />,
-                label: "Requested"
+                label: "Pending"
               };
-            case "blocked":
+            case "rejected":
               return {
                 className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-                icon: <MdBlock className="w-3 h-3" />,
-                label: "Blocked"
-              };
-            case "declined":
-              return {
-                className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
                 icon: <MdCancel className="w-3 h-3" />,
-                label: "Declined"
+                label: "Rejected"
               };
             default:
               return {
                 className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-                icon: null,
-                label: status
+                icon: <MdPending className="w-3 h-3" />,
+                label: "Pending"
               };
           }
         };
@@ -181,18 +232,21 @@ const Sellers = () => {
         );
       },
     }),
-    columnHelper.accessor("totalProducts", {
-      id: "products",
+    columnHelper.accessor("rating", {
+      id: "rating",
       header: () => (
         <p className="text-sm font-bold text-gray-600 dark:text-white">
-          PRODUCTS
+          RATING
         </p>
       ),
-      cell: (info) => (
-        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900 dark:text-blue-300">
-          {info.getValue()}
-        </span>
-      ),
+      cell: (info) => {
+        const rating = info.getValue()?.average || 0;
+        return (
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900 dark:text-blue-300">
+            {rating.toFixed(1)} ⭐
+          </span>
+        );
+      },
     }),
     columnHelper.accessor("id", {
       id: "actions",
@@ -225,11 +279,11 @@ const Sellers = () => {
                   View Details
                 </button>
                 
-                {seller.status === "requested" && (
+                {seller.verificationStatus === "pending" && (
                   <>
                     <hr className="border-gray-200 dark:border-gray-600" />
                     <button
-                      onClick={() => handleAction('verify', seller)}
+                      onClick={() => handleAction('approve', seller)}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-3"
                     >
                       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-50 dark:bg-green-900/20">
@@ -238,52 +292,29 @@ const Sellers = () => {
                       Approve
                     </button>
                     <button
-                      onClick={() => handleAction('decline', seller)}
+                      onClick={() => handleAction('reject', seller)}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
                     >
                       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20">
                         <MdClose className="h-3 w-3 text-red-500 dark:text-red-400" />
                       </div>
-                      Decline
+                      Reject
                     </button>
                   </>
                 )}
 
-                {seller.status === "verified" && (
-                  <>
-                    <hr className="border-gray-200 dark:border-gray-600" />
-                    <button
-                      onClick={() => handleAction('edit', seller)}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3"
-                    >
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-900/20">
-                        <MdEdit className="h-3 w-3 text-blue-500 dark:text-blue-400" />
-                      </div>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleAction('block', seller)}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
-                    >
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20">
-                        <MdBlock className="h-3 w-3 text-red-500 dark:text-red-400" />
-                      </div>
-                      Block
-                    </button>
-                  </>
-                )}
 
-                {seller.status === "blocked" && (
+                {seller.verificationStatus === "rejected" && (
                   <>
                     <hr className="border-gray-200 dark:border-gray-600" />
                     <button
-                      onClick={() => handleAction('unblock', seller)}
+                      onClick={() => handleAction('approve', seller)}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-3"
                     >
                       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-50 dark:bg-green-900/20">
                         <MdCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />
                       </div>
-                      Unblock
+                      Approve
                     </button>
                   </>
                 )}
@@ -294,6 +325,64 @@ const Sellers = () => {
       },
     }),
   ];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="mt-3 grid h-full grid-cols-1 gap-6">
+        <Card extra="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading sellers...</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show error state (but not for 403 errors)
+  if (error && !loading) {
+    return (
+      <div className="mt-3 grid h-full grid-cols-1 gap-6">
+        <Card extra="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="text-red-500 text-6xl mb-4">⚠️</div>
+              <p className="text-red-600 dark:text-red-400 mb-2">Error loading sellers</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{error}</p>
+              <button 
+                onClick={() => getSellers()}
+                className="mt-4 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show empty state for 403 errors (no error message, just empty state)
+  if (!loading && !error && sellersArray.length === 0) {
+    return (
+      <div className="mt-3 grid h-full grid-cols-1 gap-6">
+        <Card extra="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="text-gray-400 text-6xl mb-4">📋</div>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">No sellers found</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">
+                There are no sellers to display at the moment.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 grid h-full grid-cols-1 gap-6">
@@ -318,7 +407,7 @@ const Sellers = () => {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
               <div className="flex items-center justify-between">
                 <div>
@@ -334,8 +423,8 @@ const Sellers = () => {
             <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">Requested</p>
-                  <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.requested}</p>
+                  <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">Pending</p>
+                  <p className="text-xl font-bold text-yellow-700 dark:text-yellow-300">{stats.pending}</p>
                 </div>
                 <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
                   <MdPending className="text-white text-lg" />
@@ -346,8 +435,8 @@ const Sellers = () => {
             <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-xl border border-green-200 dark:border-green-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-600 dark:text-green-400 text-xs font-medium">Verified</p>
-                  <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.verified}</p>
+                  <p className="text-green-600 dark:text-green-400 text-xs font-medium">Approved</p>
+                  <p className="text-xl font-bold text-green-700 dark:text-green-300">{stats.approved}</p>
                 </div>
                 <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                   <MdCheckCircle className="text-white text-lg" />
@@ -358,22 +447,10 @@ const Sellers = () => {
             <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-200 dark:border-red-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-red-600 dark:text-red-400 text-xs font-medium">Blocked</p>
-                  <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.blocked}</p>
+                  <p className="text-red-600 dark:text-red-400 text-xs font-medium">Rejected</p>
+                  <p className="text-xl font-bold text-red-700 dark:text-red-300">{stats.rejected}</p>
                 </div>
                 <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                  <MdBlock className="text-white text-lg" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Declined</p>
-                  <p className="text-xl font-bold text-gray-700 dark:text-gray-300">{stats.declined}</p>
-                </div>
-                <div className="w-10 h-10 bg-gray-500 rounded-lg flex items-center justify-center">
                   <MdCancel className="text-white text-lg" />
                 </div>
               </div>
@@ -407,6 +484,106 @@ const Sellers = () => {
           title={`Sellers ${selectedStatus !== "all" ? `- ${statusOptions.find(s => s.value === selectedStatus)?.label}` : ""}`}
         />
       </div>
+
+      {/* Rejection Modal */}
+      {showRejectModal && selectedSeller && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-700 rounded-xl shadow-2xl w-full max-w-lg">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                  <MdCancel className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-navy-700 dark:text-white">
+                    Reject Seller Application
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Provide a reason for rejection
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectionReason('');
+                  setSelectedSeller(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                <MdClose className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Seller Information
+                </label>
+                <div className="bg-gray-50 dark:bg-gray-600 p-3 rounded-lg">
+                  <p className="font-medium text-navy-700 dark:text-white">{selectedSeller?.businessName}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{selectedSeller?.name}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason for Rejection <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Please provide a detailed reason for rejecting this seller application. This will help the seller understand what needs to be improved..."
+                  className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-navy-600 dark:text-white resize-none"
+                  rows={5}
+                  maxLength={500}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Be specific and constructive in your feedback
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {rejectionReason.length}/500
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectionReason('');
+                  setSelectedSeller(null);
+                }}
+                className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={actionLoading || !rejectionReason.trim()}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <MdCancel className="w-4 h-4" />
+                    Reject Seller
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
