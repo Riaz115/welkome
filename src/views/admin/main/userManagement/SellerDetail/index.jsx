@@ -20,7 +20,8 @@ import {
   MdVisibility,
   MdClose,
   MdPictureAsPdf,
-  MdImage
+  MdImage,
+  MdBlock
 } from 'react-icons/md';
 import useSellerApiStore from 'stores/useSellerApiStore';
 import { toast } from 'react-toastify';
@@ -31,12 +32,14 @@ const SellerDetail = () => {
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [blockReason, setBlockReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
 
-  const { getSellerById, approveSeller, rejectSeller } = useSellerApiStore();
+  const { getSellerById, approveSeller, rejectSeller, blockSeller, unblockSeller } = useSellerApiStore();
 
   useEffect(() => {
     fetchSellerDetails();
@@ -63,6 +66,39 @@ const SellerDetail = () => {
       fetchSellerDetails(); // Refresh data
     } catch (error) {
       toast.error('Failed to approve seller');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!blockReason.trim()) {
+      toast.error('Please provide a reason for blocking');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await blockSeller(id, blockReason);
+      toast.success('Seller blocked successfully!');
+      fetchSellerDetails(); // Refresh data
+      setShowBlockModal(false);
+      setBlockReason('');
+    } catch (error) {
+      toast.error('Failed to block seller');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      setActionLoading(true);
+      await unblockSeller(id);
+      toast.success('Seller unblocked successfully!');
+      fetchSellerDetails(); // Refresh data
+    } catch (error) {
+      toast.error('Failed to unblock seller');
     } finally {
       setActionLoading(false);
     }
@@ -440,6 +476,36 @@ const SellerDetail = () => {
             </Card>
           )}
 
+          {/* Block/Unblock Actions for Approved Sellers */}
+          {seller.verificationStatus === 'approved' && (
+            <Card extra="p-6">
+              <h3 className="text-lg font-semibold text-navy-700 dark:text-white mb-4">
+                Seller Management
+              </h3>
+              <div className="space-y-3">
+                {seller.isBlocked ? (
+                  <button
+                    onClick={handleUnblock}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <MdCheckCircle className="w-5 h-5" />
+                    {actionLoading ? 'Processing...' : 'Unblock Seller'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowBlockModal(true)}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <MdBlock className="w-5 h-5" />
+                    Block Seller
+                  </button>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Documents */}
           <Card extra="p-6">
             <h3 className="text-lg font-semibold text-navy-700 dark:text-white mb-4">
@@ -604,6 +670,104 @@ const SellerDetail = () => {
                   <>
                     <MdCancel className="w-4 h-4" />
                     Reject Seller
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-700 rounded-xl shadow-2xl w-full max-w-lg">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
+                  <MdBlock className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-navy-700 dark:text-white">
+                    Block Seller
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Provide a reason for blocking
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockReason('');
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                <MdClose className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Seller Information
+                </label>
+                <div className="bg-gray-50 dark:bg-gray-600 p-3 rounded-lg">
+                  <p className="font-medium text-navy-700 dark:text-white">{seller?.businessName}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{seller?.name}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason for Blocking <span className="text-orange-500">*</span>
+                </label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="Please provide a detailed reason for blocking this seller. This will help the seller understand what needs to be addressed..."
+                  className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent dark:bg-navy-600 dark:text-white resize-none"
+                  rows={5}
+                  maxLength={500}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Be specific and constructive in your feedback
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {blockReason.length}/500
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockReason('');
+                }}
+                className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlock}
+                disabled={actionLoading || !blockReason.trim()}
+                className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <MdBlock className="w-4 h-4" />
+                    Block Seller
                   </>
                 )}
               </button>

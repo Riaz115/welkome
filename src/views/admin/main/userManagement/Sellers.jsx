@@ -15,7 +15,9 @@ const Sellers = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [blockReason, setBlockReason] = useState('');
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -25,7 +27,9 @@ const Sellers = () => {
     error, 
     getSellers, 
     approveSeller,
-    rejectSeller
+    rejectSeller,
+    blockSeller,
+    unblockSeller
   } = useSellerApiStore();
 
   // Fetch sellers on component mount
@@ -55,6 +59,12 @@ const Sellers = () => {
     if (selectedStatus === "all") {
       return sellersArray;
     }
+    if (selectedStatus === "blocked") {
+      return sellersArray.filter(seller => seller.verificationStatus === "approved" && seller.isBlocked === true);
+    }
+    if (selectedStatus === "unblocked") {
+      return sellersArray.filter(seller => seller.verificationStatus === "approved" && seller.isBlocked === false);
+    }
     return sellersArray.filter(seller => seller.verificationStatus === selectedStatus);
   }, [sellersArray, selectedStatus]);
 
@@ -64,7 +74,9 @@ const Sellers = () => {
       total: sellersArray.length,
       pending: sellersArray.filter(s => s.verificationStatus === "pending").length,
       approved: sellersArray.filter(s => s.verificationStatus === "approved").length,
-      rejected: sellersArray.filter(s => s.verificationStatus === "rejected").length
+      rejected: sellersArray.filter(s => s.verificationStatus === "rejected").length,
+      blocked: sellersArray.filter(s => s.verificationStatus === "approved" && s.isBlocked === true).length,
+      unblocked: sellersArray.filter(s => s.verificationStatus === "approved" && s.isBlocked === false).length
     };
   };
 
@@ -75,7 +87,9 @@ const Sellers = () => {
     { value: "all", label: "All Sellers", count: stats.total },
     { value: "pending", label: "Pending", count: stats.pending },
     { value: "approved", label: "Approved", count: stats.approved },
-    { value: "rejected", label: "Rejected", count: stats.rejected }
+    { value: "rejected", label: "Rejected", count: stats.rejected },
+    { value: "blocked", label: "Blocked", count: stats.blocked },
+    { value: "unblocked", label: "Unblocked", count: stats.unblocked }
   ];
 
   const handleDropdownToggle = (rowIndex, event) => {
@@ -97,6 +111,16 @@ const Sellers = () => {
         case 'reject':
           setSelectedSeller(seller);
           setShowRejectModal(true);
+          break;
+        case 'block':
+          setSelectedSeller(seller);
+          setShowBlockModal(true);
+          break;
+        case 'unblock':
+          setActionLoading(true);
+          await unblockSeller(seller._id);
+          toast.success(`Seller ${seller.businessName} has been unblocked successfully!`);
+          setActionLoading(false);
           break;
         case 'view':
           // Navigate to seller detail page
@@ -127,6 +151,26 @@ const Sellers = () => {
       setActionLoading(false);
     } catch (error) {
       toast.error('Failed to reject seller');
+      setActionLoading(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!blockReason.trim()) {
+      toast.error('Please provide a reason for blocking');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await blockSeller(selectedSeller._id, blockReason);
+      toast.success(`Seller ${selectedSeller.businessName} has been blocked.`);
+      setShowBlockModal(false);
+      setBlockReason('');
+      setSelectedSeller(null);
+      setActionLoading(false);
+    } catch (error) {
+      toast.error('Failed to block seller');
       setActionLoading(false);
     }
   };
@@ -232,6 +276,47 @@ const Sellers = () => {
         );
       },
     }),
+    columnHelper.accessor("isBlocked", {
+      id: "blockStatus",
+      header: () => (
+        <p className="text-sm font-bold text-gray-600 dark:text-white">
+          BLOCK STATUS
+        </p>
+      ),
+      cell: (info) => {
+        const seller = info.row.original;
+        const isBlocked = seller.isBlocked;
+        
+        if (seller.verificationStatus !== "approved") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+              <MdPending className="w-3 h-3" />
+              N/A
+            </span>
+          );
+        }
+        
+        return (
+          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
+            isBlocked 
+              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+              : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+          }`}>
+            {isBlocked ? (
+              <>
+                <MdBlock className="w-3 h-3" />
+                Blocked
+              </>
+            ) : (
+              <>
+                <MdCheckCircle className="w-3 h-3" />
+                Active
+              </>
+            )}
+          </span>
+        );
+      },
+    }),
     columnHelper.accessor("rating", {
       id: "rating",
       header: () => (
@@ -316,6 +401,33 @@ const Sellers = () => {
                       </div>
                       Approve
                     </button>
+                  </>
+                )}
+
+                {seller.verificationStatus === "approved" && (
+                  <>
+                    <hr className="border-gray-200 dark:border-gray-600" />
+                    {seller.isBlocked ? (
+                      <button
+                        onClick={() => handleAction('unblock', seller)}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-3"
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-50 dark:bg-green-900/20">
+                          <MdCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />
+                        </div>
+                        Unblock
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAction('block', seller)}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20">
+                          <MdBlock className="h-3 w-3 text-red-500 dark:text-red-400" />
+                        </div>
+                        Block
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -577,6 +689,106 @@ const Sellers = () => {
                   <>
                     <MdCancel className="w-4 h-4" />
                     Reject Seller
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Modal */}
+      {showBlockModal && selectedSeller && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-700 rounded-xl shadow-2xl w-full max-w-lg">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
+                  <MdBlock className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-navy-700 dark:text-white">
+                    Block Seller
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Provide a reason for blocking
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockReason('');
+                  setSelectedSeller(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                <MdClose className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Seller Information
+                </label>
+                <div className="bg-gray-50 dark:bg-gray-600 p-3 rounded-lg">
+                  <p className="font-medium text-navy-700 dark:text-white">{selectedSeller?.businessName}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{selectedSeller?.name}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason for Blocking <span className="text-orange-500">*</span>
+                </label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="Please provide a detailed reason for blocking this seller. This will help the seller understand what needs to be addressed..."
+                  className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent dark:bg-navy-600 dark:text-white resize-none"
+                  rows={5}
+                  maxLength={500}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Be specific and constructive in your feedback
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {blockReason.length}/500
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockReason('');
+                  setSelectedSeller(null);
+                }}
+                className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlock}
+                disabled={actionLoading || !blockReason.trim()}
+                className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <MdBlock className="w-4 h-4" />
+                    Block Seller
                   </>
                 )}
               </button>

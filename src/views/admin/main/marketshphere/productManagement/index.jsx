@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Card from "components/card";
 import SearchIcon from "components/icons/SearchIcon";
-import { MdChevronRight, MdChevronLeft, MdFilterList, MdExpandMore, MdExpandLess, MdClear } from "react-icons/md";
+import { MdChevronRight, MdChevronLeft, MdFilterList, MdExpandMore, MdExpandLess, MdClear, MdCheck, MdClose, MdMoreVert } from "react-icons/md";
 import { useLocation, useNavigate } from "react-router-dom";
 import useProductApiStore from "stores/useProductApiStore";
+import { useAuthStore } from "stores/useAuthStore";
 import { toast } from "react-toastify";
 
 import {
@@ -19,15 +20,114 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 
-// using backend only; removed dummy data
+const ActionMenu = ({ product, canEdit, canDelete, canApproveReject, onViewClick, onEditClick, onDeleteClick, onApproveClick, onRejectClick, canEditProduct, canDeleteProduct }) => {
+  const [showMenu, setShowMenu] = React.useState(false);
+  const menuRef = React.useRef(null);
+  
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="inline-flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-150"
+        title="Actions"
+      >
+        <MdMoreVert className="w-4 h-4" />
+      </button>
+      
+      {showMenu && (
+        <div className="absolute right-0 top-8 z-50 w-48 bg-white dark:bg-navy-700 rounded-lg shadow-lg border border-gray-200 dark:border-navy-600 py-1">
+          <button
+            onClick={() => {
+              setShowMenu(false);
+              onViewClick && onViewClick(product);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-navy-600 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            View Details
+          </button>
+          
+          {canEdit && (
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                onEditClick && onEditClick(product);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Product
+            </button>
+          )}
+          
+          {canApproveReject && product.status === 'pending' && (
+            <>
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  onApproveClick && onApproveClick(product);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-2"
+              >
+                <MdCheck className="w-4 h-4" />
+                Approve Product
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  onRejectClick && onRejectClick(product);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+              >
+                <MdClose className="w-4 h-4" />
+                Reject Product
+              </button>
+            </>
+          )}
+          
+          
+          {canDelete && (
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                onDeleteClick && onDeleteClick(product);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Product
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 function ProductTable(props) {
-  const { tableData, onAddClick, onEditClick, onDeleteClick, initialFilters, clearFilters } = props;
+  const { tableData, onAddClick, onEditClick, onDeleteClick, onApproveClick, onRejectClick, onViewClick, initialFilters, clearFilters, canEditProduct, canDeleteProduct } = props;
+  const { user } = useAuthStore();
   const [columnFilters, setColumnFilters] = React.useState([]);
   let defaultData = tableData;
   const [globalFilter, setGlobalFilter] = React.useState(initialFilters?.search || "");
   
-  // Advanced filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false);
   const [advancedFilters, setAdvancedFilters] = React.useState({
     category: "",
@@ -43,7 +143,6 @@ function ProductTable(props) {
     hasDiscount: ""
   });
   
-  // Apply initial filters when component mounts
   React.useEffect(() => {
     if (initialFilters) {
       if (initialFilters.search) {
@@ -57,7 +156,6 @@ function ProductTable(props) {
     }
   }, [initialFilters]);
 
-  // Clear filters when clearFilters is called
   React.useEffect(() => {
     if (clearFilters && !initialFilters) {
       setGlobalFilter("");
@@ -78,19 +176,14 @@ function ProductTable(props) {
     }
   }, [clearFilters, initialFilters]);
 
-  // Get unique values for filter dropdowns
   const getUniqueValues = (key) => {
     const values = [...new Set(tableData.map(item => item[key]))].filter(Boolean);
     return values.sort();
   };
 
-  // Apply advanced filters (this will trigger the useMemo above)
   const applyAdvancedFilters = () => {
-    // The filtering is automatically applied via useMemo dependency on advancedFilters
-    // This function can be used for additional actions if needed
   };
 
-  // Clear advanced filters
   const clearAdvancedFilters = () => {
     setAdvancedFilters({
       category: "",
@@ -108,7 +201,6 @@ function ProductTable(props) {
     setColumnFilters([]);
   };
 
-  // Custom filter function
   const customFilterFn = (row, columnId, filterValue) => {
     const value = row.getValue(columnId);
     
@@ -198,7 +290,6 @@ function ProductTable(props) {
         
         const copyToClipboard = () => {
           navigator.clipboard.writeText(fullId);
-          // You could add a toast notification here
         };
 
         return (
@@ -298,9 +389,7 @@ function ProductTable(props) {
               }
               return String(val);
             };
-            // category title
             const categoryTitle = renderPath(value) || renderPath(original.category);
-            // primeCategory subtitle
             const primeSubtitle = renderPrime(original.primeCategory) || (typeof value === 'object' ? renderPrime(value.primeCategory) : '');
             return (
               <>
@@ -376,6 +465,31 @@ function ProductTable(props) {
         );
       },
     }),
+    columnHelper.accessor("status", {
+      id: "status",
+      header: () => (
+        <p className="text-sm font-bold text-gray-600 dark:text-white">
+          STATUS
+        </p>
+      ),
+      cell: (info) => {
+        const status = info.getValue();
+        const getStatusColor = (status) => {
+          switch (status) {
+            case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+            case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+            case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+          }
+        };
+        
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+            {status?.charAt(0).toUpperCase() + status?.slice(1) || 'Unknown'}
+          </span>
+        );
+      },
+    }),
     columnHelper.accessor("actions", {
       id: "actions",
       header: () => (
@@ -383,44 +497,33 @@ function ProductTable(props) {
           ACTIONS
         </p>
       ),
-      cell: (info) => (
-                          <div className="flex items-center gap-2">
-                            <button
-            onClick={() => {
-              onEditClick(info.row.original);
-            }}
-                              className="inline-flex items-center justify-center w-8 h-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-150"
-                              title="Edit Product"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
-            onClick={() => onDeleteClick && onDeleteClick(info.row.original)}
-                              className="inline-flex items-center justify-center w-8 h-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-150"
-                              title="Delete Product"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                            <button
-                              className="inline-flex items-center justify-center w-8 h-8 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-all duration-150"
-                              title="View Details"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
-      ),
+      cell: (info) => {
+        const product = info.row.original;
+        const canEdit = canEditProduct(product);
+        const canDelete = canDeleteProduct(product);
+        const canApproveReject = user?.role === 'admin';
+        
+        return (
+          <ActionMenu 
+            product={product}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            canApproveReject={canApproveReject}
+            onViewClick={onViewClick}
+            onEditClick={onEditClick}
+            onDeleteClick={onDeleteClick}
+            onApproveClick={onApproveClick}
+            onRejectClick={onRejectClick}
+            canEditProduct={canEditProduct}
+            canDeleteProduct={canDeleteProduct}
+          />
+        );
+      },
     }),
   ];
   
   const [data, setData] = React.useState(() => [...defaultData]);
   
-  // Update data when tableData prop changes
   React.useEffect(() => {
     setData([...tableData]);
   }, [tableData]);
@@ -438,12 +541,9 @@ function ProductTable(props) {
     [pageIndex, pageSize]
   );
 
-  // Custom filter function for complex filters
   React.useMemo(() => {
-    // Apply complex filters manually to the data
     let filteredData = [...defaultData];
     
-    // Apply advanced filters
     if (advancedFilters.category && advancedFilters.category !== "") {
       filteredData = filteredData.filter(item => 
         item.category.toLowerCase().includes(advancedFilters.category.toLowerCase())
@@ -468,7 +568,6 @@ function ProductTable(props) {
       );
     }
     
-    // Date range filter
     if (advancedFilters.dateFrom || advancedFilters.dateTo) {
       filteredData = filteredData.filter(item => {
         const itemDate = new Date(item.dateAdded);
@@ -486,7 +585,6 @@ function ProductTable(props) {
       });
     }
     
-    // Price range filter
     if (advancedFilters.priceMin || advancedFilters.priceMax) {
       filteredData = filteredData.filter(item => {
         const price = parseFloat(item.price);
@@ -497,7 +595,6 @@ function ProductTable(props) {
       });
     }
     
-    // Discounted price range filter
     if (advancedFilters.discountedPriceMin || advancedFilters.discountedPriceMax) {
       filteredData = filteredData.filter(item => {
         const discountedPrice = parseFloat(item.discountedPrice || 0);
@@ -507,11 +604,10 @@ function ProductTable(props) {
         if (item.discountedPrice) {
           return discountedPrice >= minDiscPrice && discountedPrice <= maxDiscPrice;
         }
-        return minDiscPrice === 0; // Show items without discount only if min is 0
+        return minDiscPrice === 0;
       });
     }
     
-    // Has discount filter
     if (advancedFilters.hasDiscount && advancedFilters.hasDiscount !== "") {
       filteredData = filteredData.filter(item => {
         const hasDiscount = item.discountedPrice && item.discountedPrice < item.price;
@@ -521,7 +617,6 @@ function ProductTable(props) {
       });
     }
     
-    // Stock status filter
     if (advancedFilters.stockStatus && advancedFilters.stockStatus !== "") {
       filteredData = filteredData.filter(item => {
         const stock = item.stock;
@@ -576,7 +671,6 @@ function ProductTable(props) {
               />
             </div>
             
-            {/* Advanced Filter Toggle */}
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-navy-700 dark:hover:bg-navy-600 text-gray-700 dark:text-white rounded-lg transition-all duration-200"
@@ -601,11 +695,9 @@ function ProductTable(props) {
           )}
         </div>
 
-        {/* Advanced Filters Panel */}
         {showAdvancedFilters && (
           <div className="mt-4 p-6 bg-white/50 dark:bg-navy-800/30 rounded-xl border border-gray-100 dark:border-navy-700 backdrop-blur-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {/* Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Category
@@ -622,7 +714,6 @@ function ProductTable(props) {
                 </select>
               </div>
 
-              {/* Prime Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Prime Category
@@ -639,7 +730,6 @@ function ProductTable(props) {
                 </select>
               </div>
 
-              {/* SKU Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   SKU
@@ -653,7 +743,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Status Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Status
@@ -670,7 +759,6 @@ function ProductTable(props) {
                 </select>
               </div>
 
-              {/* Date From */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Date From
@@ -683,7 +771,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Date To */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Date To
@@ -696,7 +783,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Price Min */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Min Price ($)
@@ -712,7 +798,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Price Max */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Max Price ($)
@@ -728,7 +813,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Discounted Price Min */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Min Discounted Price ($)
@@ -744,7 +828,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Discounted Price Max */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Max Discounted Price ($)
@@ -760,7 +843,6 @@ function ProductTable(props) {
                 />
               </div>
 
-              {/* Has Discount Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Has Discount
@@ -776,7 +858,6 @@ function ProductTable(props) {
                 </select>
               </div>
 
-              {/* Stock Status Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-white mb-1">
                   Stock Status
@@ -794,7 +875,6 @@ function ProductTable(props) {
               </div>
             </div>
 
-            {/* Filter Actions */}
             <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-navy-700">
               <button
                 onClick={applyAdvancedFilters}
@@ -878,15 +958,12 @@ function ProductTable(props) {
                 })}
               </tbody>
             </table>
-          {/* pagination */}
           <div className="mt-2 flex h-20 w-full items-center justify-between px-6">
-            {/* left side */}
             <div className="flex items-center gap-3">
               <p className="text-sm text-gray-700">
                 Showing {pageSize} rows per page
               </p>
             </div>
-            {/* right side */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => table.previousPage()}
@@ -932,16 +1009,21 @@ const ProductManagement = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentCategoryContext, setCurrentCategoryContext] = useState(null);
+  const { user } = useAuthStore();
 
-  const { products: apiProducts, getAllProducts, deleteProduct, loading } = useProductApiStore();
+  const { products: apiProducts, getAllProducts, getSellerProducts, deleteProduct, approveProduct, rejectProduct, loading } = useProductApiStore();
   const [products, setProducts] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [productToReject, setProductToReject] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   const getFirstImageUrl = (p) => {
     if (!p) return '';
-    // New backend shape: media: { coverImage, images: [] }
     if (p.media) {
       if (typeof p.media.coverImage === 'string' && p.media.coverImage) return p.media.coverImage;
       const img0 = Array.isArray(p.media.images) ? p.media.images[0] : null;
@@ -972,34 +1054,95 @@ const ProductManagement = () => {
       if (typeof val === 'object' && val.$date) return val.$date;
       return String(val);
     };
-    const basePrice = Number((p.pricing && (p.pricing.basePrice ?? p.pricing.price)) ?? p.price ?? 0) || 0;
-    const discountPercent = Number(p.pricing?.discountPercent ?? 0) || 0;
-    const discountedPrice = discountPercent > 0 ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2)) : null;
+    
+    const basePrice = Number(p.price || p.pricing?.basePrice || 0) || 0;
+    const discountPercent = Number(p.discount || p.pricing?.discountPercent || 0) || 0;
+    const discountedPrice = discountPercent > 0 ? Number(p.finalPrice || (basePrice * (1 - discountPercent / 100)).toFixed(2)) : null;
+    
+    const totalStock = Array.isArray(p.variants) ? p.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0) : 0;
 
     return {
       id: normalizeId(p._id) || p.id || normalizeId(p.id),
       sku: p.sku || '',
-      name: p.name || p.title || '',
+      name: p.title || p.name || '',
       description: p.description || '',
       image: getFirstImageUrl(p),
       category: (p.category && (p.category.category || p.category.name)) || p.category || '',
       primeCategory: (p.category && (p.category.primeCategory || p.category.primeCategory?.name)) || p.primeCategory || '',
       price: basePrice,
       discountedPrice,
-      stock: Array.isArray(p.variants) ? p.variants.length : (p.stock || 0),
-      dateAdded: normalizeDate(p.dateAdded || p.createdAt),
-      status: p.status || 'Active',
+      stock: totalStock,
+      dateAdded: normalizeDate(p.createdAt || p.dateAdded),
+      status: p.status || 'pending',
+      rejectionReason: p.rejectionReason || '',
+      creator: p.creator || null,
+      brand: p.brand || '',
+      tags: p.tags || [],
+      variants: p.variants || [],
+      originalData: p
     };
   };
 
-  useEffect(() => {
-    getAllProducts().catch(() => {
-      setProducts([]);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const canEditProduct = (product) => {
+    if (!product) return false;
+    
+    const creatorId = product.creator?.id?.$oid || product.creator?.id;
+    if (!creatorId) return false;
+    
+    const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = currentUser.id || currentUser._id;
+    
+    return creatorId === userId;
+  };
 
-  // Keep products in sync with API store
+  const canDeleteProduct = (product) => {
+    if (!product) return false;
+    
+    const creatorId = product.creator?.id?.$oid || product.creator?.id;
+    if (!creatorId) return false;
+    
+    const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = currentUser.id || currentUser._id;
+    
+    return creatorId === userId;
+  };
+
+  const canApproveReject = (product) => {
+    return user?.role === 'admin';
+  };
+
+  const getFilteredProducts = () => {
+    if (activeTab === 'all') return products;
+    if (activeTab === 'admin') {
+      return products.filter(product => {
+        const creatorId = product.creator?.id?.$oid || product.creator?.id;
+        const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = currentUser.id || currentUser._id;
+        return creatorId === userId;
+      });
+    }
+    return products.filter(product => product.status === activeTab);
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        if (user?.role === 'seller') {
+          const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+          const userId = currentUser.id || currentUser._id;
+          await getSellerProducts(userId);
+        } else {
+          await getAllProducts();
+        }
+      } catch (error) {
+        setProducts([]);
+      }
+    };
+    
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   useEffect(() => {
     if (Array.isArray(apiProducts) && apiProducts.length >= 0) {
       const normalized = apiProducts.map(normalizeProduct);
@@ -1007,23 +1150,19 @@ const ProductManagement = () => {
     }
   }, [apiProducts]);
 
-  // Extract category context from navigation state
   const categoryContext = location.state?.categoryContext;
   
-  // Set initial category context
   React.useEffect(() => {
     if (categoryContext) {
       setCurrentCategoryContext(categoryContext);
     }
   }, [categoryContext]);
   
-  // Create initial filters based on category context
   const getInitialFilters = () => {
     if (!currentCategoryContext) return null;
     
     const filters = {};
     
-    // Set search filter to category name for easier filtering
     if (currentCategoryContext.category) {
       filters.search = currentCategoryContext.category.name;
     }
@@ -1033,21 +1172,21 @@ const ProductManagement = () => {
 
   const initialFilters = getInitialFilters();
 
-  // Function to clear all filters
   const clearFilters = () => {
     setCurrentCategoryContext(null);
-    // Clear browser history state as well
     window.history.replaceState({}, '', location.pathname);
   };
 
-  // Function to handle edit product navigation
   const handleEditProduct = (product) => {
     navigate(`/admin/main/marketsphere/product-settings/${product.id}`);
   };
 
-  // Function to handle opening add product modal
   const handleOpenAddModal = () => {
     navigate('/admin/main/marketsphere/new-product');
+  };
+
+  const handleViewProduct = (product) => {
+    navigate(`/admin/main/marketsphere/product-view/${product.id}`, { state: { product: product.originalData } });
   };
 
   const handleRequestDelete = (product) => {
@@ -1076,26 +1215,81 @@ const ProductManagement = () => {
     setProductToDelete(null);
   };
 
-  // Check for new product from navigation state
+  const handleApproveProduct = async (product) => {
+    try {
+      await approveProduct(product.id);
+      setProducts((prev) => prev.map(p => 
+        p.id === product.id ? { ...p, status: 'approved', rejectionReason: '' } : p
+      ));
+      toast.success('Product approved successfully');
+    } catch (error) {
+      toast.error('Failed to approve product');
+    }
+  };
+
+  const handleRejectProduct = (product) => {
+    setProductToReject(product);
+    setRejectionReason('');
+    setShowRejectModal(true);
+  };
+
+
+  const cancelReject = () => {
+    setShowRejectModal(false);
+    setProductToReject(null);
+    setRejectionReason('');
+    setIsRejecting(false);
+  };
+
+  const confirmReject = async () => {
+    if (!productToReject || !rejectionReason.trim()) {
+      toast.error('Please provide a rejection reason');
+      return;
+    }
+    try {
+      setIsRejecting(true);
+      await rejectProduct(productToReject.id, rejectionReason);
+      setProducts((prev) => prev.map(p => 
+        p.id === productToReject.id ? { ...p, status: 'rejected', rejectionReason } : p
+      ));
+      toast.success('Product rejected successfully');
+    } catch (error) {
+      toast.error('Failed to reject product');
+    } finally {
+      setIsRejecting(false);
+      setShowRejectModal(false);
+      setProductToReject(null);
+      setRejectionReason('');
+    }
+  };
+
   React.useEffect(() => {
     if (location.state?.newProduct) {
       const normalized = normalizeProduct(location.state.newProduct);
       setProducts(prevProducts => [normalized, ...prevProducts]);
       if (location.state.message) {
-        // Optional: Clear the state to prevent re-adding on refresh
         window.history.replaceState({}, '', location.pathname);
       }
     }
   }, [location.state]);
 
-  // Create a unique key to force ProductTable re-render when context changes
   const tableKey = currentCategoryContext 
     ? `${currentCategoryContext.primeCategory?.id}-${currentCategoryContext.category?.id}`
     : 'no-filter';
 
   return (
     <div className="w-full bg-white dark:bg-navy-800 rounded-2xl p-6 mt-6">
-      {/* Filter Context Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-navy-700 dark:text-white">
+          {user?.role === 'seller' ? 'My Products' : 'Product Management'}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-1">
+          {user?.role === 'seller' 
+            ? 'Manage your product listings and inventory' 
+            : 'Manage all products in the marketplace'
+          }
+        </p>
+      </div>
       {currentCategoryContext && (
         <div className="mb-4 p-4 bg-brand-50 dark:bg-brand-900/20 rounded-xl border border-brand-200 dark:border-brand-700">
           <div className="flex items-center gap-2">
@@ -1115,16 +1309,83 @@ const ProductManagement = () => {
       </div>
       )}
 
-      {/* Products Table */}
-      <ProductTable 
-        key={tableKey}
-        tableData={products} 
-        onAddClick={handleOpenAddModal}
-        onEditClick={handleEditProduct}
-        onDeleteClick={handleRequestDelete}
-        initialFilters={initialFilters}
-        clearFilters={clearFilters}
-      />
+      <div className="mb-6">
+        <div className="flex space-x-1 bg-gray-100 dark:bg-navy-700 p-1 rounded-lg">
+          {[
+            { key: 'all', label: 'All Products', count: products.length },
+            { key: 'pending', label: 'Pending', count: products.filter(p => p.status === 'pending').length },
+            { key: 'approved', label: 'Approved', count: products.filter(p => p.status === 'approved').length },
+            { key: 'rejected', label: 'Rejected', count: products.filter(p => p.status === 'rejected').length },
+            ...(user?.role === 'admin' ? [{ key: 'admin', label: 'My Products', count: products.filter(p => {
+              const creatorId = p.creator?.id?.$oid || p.creator?.id;
+              const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+              const userId = currentUser.id || currentUser._id;
+              return creatorId === userId;
+            }).length }] : []),
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                activeTab === tab.key
+                  ? 'bg-white dark:bg-navy-600 text-brand-600 dark:text-brand-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {getFilteredProducts().length === 0 ? (
+        <div className="text-center py-12">
+          <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-gray-100 dark:bg-navy-700 mb-4">
+            <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            {activeTab === 'all' ? 'No products found' : 
+             activeTab === 'admin' ? 'No admin products found' : 
+             `No ${activeTab} products`}
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            {activeTab === 'all' 
+              ? 'Get started by adding your first product to the marketplace.'
+              : activeTab === 'admin'
+              ? 'You haven\'t created any products yet.'
+              : `There are currently no products with ${activeTab} status.`
+            }
+          </p>
+          {user?.role === 'admin' && (
+            <button
+              onClick={handleOpenAddModal}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Product
+            </button>
+          )}
+        </div>
+      ) : (
+        <ProductTable 
+          key={tableKey}
+          tableData={getFilteredProducts()} 
+          onAddClick={handleOpenAddModal}
+          onEditClick={handleEditProduct}
+          onDeleteClick={handleRequestDelete}
+          onApproveClick={handleApproveProduct}
+          onRejectClick={handleRejectProduct}
+          onViewClick={handleViewProduct}
+          initialFilters={initialFilters}
+          clearFilters={clearFilters}
+          canEditProduct={canEditProduct}
+          canDeleteProduct={canDeleteProduct}
+        />
+      )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4">
@@ -1155,6 +1416,63 @@ const ProductManagement = () => {
                   </svg>
                 )}
                 {isDeleting ? 'Deleting...' : 'Delete Product'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-navy-700">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                <MdClose className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-navy-700 dark:text-white">Reject Product</h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Please provide a reason for rejecting this product.</p>
+              </div>
+            </div>
+            {productToReject && (
+              <div className="mb-6 rounded-xl border border-gray-200 p-4 text-sm dark:border-white/10">
+                <div className="font-semibold text-navy-700 dark:text-white">{productToReject.name || 'Untitled'}</div>
+                <div className="mt-1 text-gray-600 dark:text-gray-300">SKU: {productToReject.sku || '-'}</div>
+                <div className="text-gray-600 dark:text-gray-300">ID: {productToReject.id}</div>
+              </div>
+            )}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Rejection Reason
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please provide a detailed reason for rejecting this product..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={cancelReject} 
+                disabled={isRejecting} 
+                className={`rounded-xl px-5 py-3 text-sm ${isRejecting ? 'cursor-not-allowed opacity-60' : ''} border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-navy-600`}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmReject} 
+                disabled={isRejecting || !rejectionReason.trim()} 
+                className={`inline-flex items-center justify-center rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white hover:bg-red-600 ${isRejecting || !rejectionReason.trim() ? 'cursor-not-allowed opacity-80' : ''}`}
+              >
+                {isRejecting && (
+                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                )}
+                {isRejecting ? 'Rejecting...' : 'Reject Product'}
               </button>
             </div>
           </div>

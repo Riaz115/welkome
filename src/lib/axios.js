@@ -2,8 +2,8 @@ import axios from "axios"
 
 
 const axiosInstance = axios.create({
-    // baseURL : "http://localhost:4000/api/v1",
-    baseURL : "http://monkmaze-alb-1433160481.ap-south-1.elb.amazonaws.com/api/v1",
+    baseURL : "http://localhost:4000/api/v1",
+    // baseURL : "http://monkmaze-alb-1433160481.ap-south-1.elb.amazonaws.com/api/v1",
     withCredentials: true,
     timeout: 10000,
 })

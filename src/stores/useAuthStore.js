@@ -114,6 +114,24 @@ export const useAuthStore = create((set) => ({
       navigate('/auth/sign-in/default#/auth/sign-in/centered');
     }
   },
+
+  fetchProfile: async (userId) => {
+    set({ loading: true });
+    try {
+      const res = await axios.get(`/auth/profile/${userId}`);
+      const profileData = res.data.data;
+      
+      // Update user data in store and localStorage
+      set({ user: profileData, loading: false });
+      localStorage.setItem('user', JSON.stringify(profileData));
+      
+      return profileData;
+    } catch (error) {
+      set({ loading: false });
+      toast.error(error.response?.data?.message || 'Failed to fetch profile data');
+      throw error;
+    }
+  },
 }));
 
 

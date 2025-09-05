@@ -1,9 +1,7 @@
 import { create } from 'zustand';
-import api from '../lib/axios';
+import axiosInstance from '../lib/axios';
 
 const buildProductFormData = (productData) => {
-  console.log('=== BUILDING FORM DATA ===');
-  console.log('Input productData:', productData);
   const formData = new FormData();
 
   formData.append('title', productData.title || '');
@@ -54,41 +52,66 @@ const buildProductFormData = (productData) => {
     formData.append('videosMeta', JSON.stringify([]));
   }
 
-  console.log('=== FORM DATA BUILT SUCCESSFULLY ===');
-  console.log('FormData entries count:', Array.from(formData.entries()).length);
   return formData;
 };
 
 export const useProductApiStore = create((set, get) => ({
   products: [],
-  stats: null,
   loading: false,
   error: null,
 
   createProduct: async (productData) => {
     try {
-      console.log('=== CREATE PRODUCT DEBUG ===');
-      console.log('Create product data:', productData);
-      
       set({ loading: true, error: null });
       const formData = buildProductFormData(productData);
       
-      console.log('Create API endpoint:', '/product');
-      console.log('Create FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
-      
-      const response = await api.post('/product', formData, {
+      const response = await axiosInstance.post('/product', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       
-      console.log('Create API response:', response);
       set((state) => ({ products: [response.data?.data || response.data, ...state.products] }));
       return response.data;
     } catch (err) {
-      console.error('=== CREATE PRODUCT ERROR ===');
-      console.error('Create error:', err);
+      set({ error: err?.response?.data || err.message });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  updateProduct: async (id, updates, { isMultipart = false } = {}) => {
+    try {
+      set({ loading: true, error: null });
+      const payload = isMultipart ? buildProductFormData(updates) : updates;
+      const config = isMultipart ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+      
+      let response;
+      try {
+        response = await axiosInstance.patch(`/product/${id}`, payload, config);
+      } catch (patchError) {
+        response = await axiosInstance.put(`/product/${id}`, payload, config);
+      }
+      
+      set((state) => ({
+        products: state.products.map(p => 
+          (p._id || p.id) === id ? { ...p, ...response.data?.data || response.data } : p
+        )
+      }));
+      return response.data?.data || response.data;
+    } catch (err) {
+      set({ error: err?.response?.data || err.message });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  getProductById: async (id) => {
+    try {
+      set({ loading: true, error: null });
+      const response = await axiosInstance.get(`/product/${id}`);
+      return response.data?.data || response.data;
+    } catch (err) {
       set({ error: err?.response?.data || err.message });
       throw err;
     } finally {
@@ -99,7 +122,7 @@ export const useProductApiStore = create((set, get) => ({
   getAllProducts: async (params = {}) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get('/product', { params });
+      const response = await axiosInstance.get('/product', { params });
       const payload = response.data?.data || response.data || {};
       const list = Array.isArray(payload)
         ? payload
@@ -114,13 +137,27 @@ export const useProductApiStore = create((set, get) => ({
     }
   },
 
-  getProductStats: async () => {
+  getSellerProducts: async (sellerId) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get('/product/stats');
-      const stats = response.data?.data || response.data;
-      set({ stats });
-      return stats;
+      
+      let actualSellerId = sellerId;
+      if (!actualSellerId) {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        actualSellerId = userData.id || userData._id;
+      }
+      
+      if (!actualSellerId) {
+        throw new Error('Seller ID not found');
+      }
+      
+      const response = await axiosInstance.get(`/product/seller/${actualSellerId}`);
+      const payload = response.data?.data || response.data || {};
+      const list = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload.products) ? payload.products : []);
+      set({ products: list });
+      return list;
     } catch (err) {
       set({ error: err?.response?.data || err.message });
       throw err;
@@ -129,10 +166,17 @@ export const useProductApiStore = create((set, get) => ({
     }
   },
 
-  getProductById: async (id) => {
+  approveProduct: async (id) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get(`/product/${id}`);
+      const response = await axiosInstance.patch(`/product/${id}/approve`);
+      set((state) => ({
+        products: state.products.map(p => 
+          (p._id || p.id) === id 
+            ? { ...p, status: 'approved', rejectionReason: '' }
+            : p
+        )
+      }));
       return response.data?.data || response.data;
     } catch (err) {
       set({ error: err?.response?.data || err.message });
@@ -142,49 +186,19 @@ export const useProductApiStore = create((set, get) => ({
     }
   },
 
-  updateProduct: async (id, updates, { isMultipart = false } = {}) => {
+  rejectProduct: async (id, reason) => {
     try {
-      console.log('=== API STORE UPDATE PRODUCT ===');
-      console.log('Product ID:', id);
-      console.log('Updates object:', updates);
-      console.log('Is multipart:', isMultipart);
-      
       set({ loading: true, error: null });
-      const payload = isMultipart ? buildProductFormData(updates) : updates;
-      const config = isMultipart ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
-      
-      console.log('API endpoint:', `/product/${id}`);
-      console.log('Request config:', config);
-      console.log('Payload type:', isMultipart ? 'FormData' : 'JSON');
-      
-      if (isMultipart) {
-        console.log('FormData entries:');
-        for (let [key, value] of payload.entries()) {
-          console.log(`${key}:`, value);
-        }
-      }
-      
-      // Try PATCH first (most common for updates), then PUT
-      let response;
-      try {
-        console.log('Trying PATCH /product/' + id);
-        response = await api.patch(`/product/${id}`, payload, config);
-        console.log('PATCH successful!');
-      } catch (patchError) {
-        console.warn('PATCH failed, trying PUT:', patchError.response?.status);
-        console.log('Trying PUT /product/' + id);
-        response = await api.put(`/product/${id}`, payload, config);
-        console.log('PUT successful!');
-      }
-      console.log('Update API response:', response);
+      const response = await axiosInstance.patch(`/product/${id}/reject`, { rejectionReason: reason });
+      set((state) => ({
+        products: state.products.map(p => 
+          (p._id || p.id) === id 
+            ? { ...p, status: 'rejected', rejectionReason: reason }
+            : p
+        )
+      }));
       return response.data?.data || response.data;
     } catch (err) {
-      console.error('=== API STORE UPDATE ERROR ===');
-      console.error('Error in updateProduct:', err);
-      console.error('Error response:', err?.response);
-      console.error('Error response data:', err?.response?.data);
-      console.error('Error status:', err?.response?.status);
-      
       set({ error: err?.response?.data || err.message });
       throw err;
     } finally {
@@ -195,7 +209,7 @@ export const useProductApiStore = create((set, get) => ({
   deleteProduct: async (id) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.delete(`/product/${id}`);
+      const response = await axiosInstance.delete(`/product/${id}`);
       set((state) => ({ products: state.products.filter(p => (p._id || p.id) !== id) }));
       return response.data?.data || response.data;
     } catch (err) {
@@ -208,5 +222,3 @@ export const useProductApiStore = create((set, get) => ({
 }));
 
 export default useProductApiStore;
-
-

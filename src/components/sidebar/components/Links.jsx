@@ -14,7 +14,8 @@ import {
   MdHome, 
   MdDirectionsBus, 
   MdLock,
-  MdOutlineShoppingCart 
+  MdOutlineShoppingCart,
+  MdPerson
 } from 'react-icons/md';
 import {
   FaBriefcase,
@@ -25,12 +26,16 @@ import {
   FaStream,
   FaUserFriends,
   FaWallet,
+  FaBox,
+  FaChartLine
 } from 'react-icons/fa';
 import ProfileIcon from 'components/icons/ProfileIcon';
+import { useAuthStore } from 'stores/useAuthStore';
 
 export function SidebarLinks(props) {
   let location = useLocation();
   const { hovered, mini } = props;
+  const { user } = useAuthStore();
   
   // verifies if routeName is the one active (in browser input)
   const activeRoute = (routeName) => {
@@ -47,134 +52,162 @@ export function SidebarLinks(props) {
     });
   };
 
-  // Static menu items
-  const staticMenuItems = [
-    {
-      name: 'Dashboard',
-      path: '/admin/dashboards/welkome',
-      icon: <MdHome className="text-inherit h-5 w-5" />,
-      type: 'single'
-    },
-    // {
-    //   name: 'Profile',
-    //   path: '/admin/profile',
-    //   icon: <ProfileIcon />,
-    //   type: 'single'
-    // },
-    {
-      name: 'User Management',
-      icon: <FaUserFriends />,
-      type: 'accordion',
-      items: [
-        { name: 'Roles & Permissions', path: '/admin/main/userManagement/roles-permissions' },
-        { name: 'Sub Admins', path: '/admin/main/userManagement/subadmins/list' },
-        { name: 'Users', path: '/admin/main/userManagement/users' },
-        { name: 'Become a Seller', path: '/admin/main/userManagement/become-a-seller' },
-        { name: 'Sellers', path: '/admin/main/userManagement/sellers' },
-        { name: 'Riders', path: '/admin/main/userManagement/riders' }
-      ]
-    },
-    {
-      name: 'MarketSphere',
-      icon: <FaShoppingBag />,
-      type: 'accordion',
-      items: [
-        { name: 'MarketSphere Dashboard', path: '/admin/dashboards/marketsphere' },
-        { name: 'Category Management', path: '/admin/main/marketsphere/category-management' },
-        { name: 'Brands Management', path: '/admin/main/marketsphere/brands-management' },
-        { name: 'Product Management', path: '/admin/main/marketsphere/product-management' },
-        { name: 'Orders', path: '/admin/main/ecommerce/order-details' },
-        { name: 'Promotions', path: '/admin/main/ecommerce/referrals' }
-      ]
-    },
-    {
-      name: 'Transit Plus',
-      icon: <MdDirectionsBus />,
-      type: 'accordion',
-      items: [
-        { name: 'Ride requests', path: '/admin/main/account/billing' },
-        { name: 'Drivers', path: '/admin/main/account/application' },
-        { name: 'Route History', path: '/admin/main/account/invoice' },
-        { name: 'Live Mapping/Tracking', path: '/admin/main/account/settings' },
-        { name: 'Delivery Partners', path: '/admin/main/account/all-courses' }
-      ]
-    },
-    {
-      name: 'StreamLink',
-      icon: <FaStream />,
-      type: 'accordion',
-      items: [
-        { name: 'Feed Moderation', path: '/admin/main/account/billing' },
-        { name: 'Comments & Reactions', path: '/admin/main/account/application' },
-        { name: 'Group Management', path: '/admin/main/account/invoice' },
-        { name: 'Reported Content', path: '/admin/main/account/settings' }
-      ]
-    },
-    {
-      name: 'HeartSync',
-      icon: <FaHeart />,
-      type: 'accordion',
-      items: [
-        { name: 'User Profiles', path: '/admin/main/account/billing' },
-        { name: 'Matchmaking Logs', path: '/admin/main/account/application' },
-        { name: 'Reports / Abuse', path: '/admin/main/account/invoice' },
-        { name: 'AI Settings', path: '/admin/main/account/settings' },
-        { name: 'Preferences Management', path: '/admin/main/account/settings' }
-      ]
-    },
-    {
-      name: 'CareerPath',
-      icon: <FaBriefcase />,
-      type: 'accordion',
-      items: [
-        { name: 'Job Listings', path: '/admin/main/account/billing' },
-        { name: 'Resume Submissions', path: '/admin/main/account/application' },
-        { name: 'Employer Profiles', path: '/admin/main/account/invoice' },
-        { name: 'Applications Review', path: '/admin/main/account/settings' },
-        { name: 'Job Curation Rules', path: '/admin/main/account/settings' }
-      ]
-    },
-    {
-      name: 'EduMatch',
-      icon: <FaGraduationCap />,
-      type: 'accordion',
-      items: [
-        { name: 'Scholarship Database', path: '/admin/main/account/billing' },
-        { name: 'AI Crawler Logs', path: '/admin/main/account/application' },
-        { name: 'Matching Rules', path: '/admin/main/account/invoice' },
-        { name: 'Applications Submitted', path: '/admin/main/account/settings' }
-      ]
-    },
-    {
-      name: 'AudioStream',
-      icon: <FaHeadphones />,
-      type: 'accordion',
-      items: [
-        { name: 'Audiobook Library', path: '/admin/main/account/billing' },
-        { name: 'Categories', path: '/admin/main/account/application' },
-        { name: 'Upload Requests', path: '/admin/main/account/invoice' },
-        { name: 'Streaming Stats', path: '/admin/main/account/settings' }
-      ]
-    },
-    {
-      name: 'WalletPro',
-      icon: <FaWallet />,
-      type: 'accordion',
-      items: [
-        { name: 'Transactions', path: '/admin/main/account/billing' },
-        { name: 'Wallet Balances', path: '/admin/main/account/application' },
-        { name: 'Payouts & Refunds', path: '/admin/main/account/invoice' },
-        { name: 'KYC Verifications', path: '/admin/main/account/settings' },
-        { name: 'Subscriptions', path: '/admin/main/account/settings' }
-      ]
-    },
-    // {
-    //   name: 'Login',
-    //   path: '/auth/sign-in/default',
-    //   icon: <MdLock className="text-inherit h-5 w-5" />,
-    //   type: 'single'
-    // }
-  ];
+  // Get menu items based on user role
+  const getMenuItems = () => {
+    if (user?.role === 'seller') {
+      return [
+        {
+          name: 'Dashboard',
+          path: '/admin/dashboards/welkome',
+          icon: <MdHome className="text-inherit h-5 w-5" />,
+          type: 'single'
+        },
+        {
+          name: 'My Products',
+          path: '/admin/main/marketsphere/product-management',
+          icon: <FaBox className="text-inherit h-5 w-5" />,
+          type: 'single'
+        },
+        {
+          name: 'Add Product',
+          path: '/admin/main/marketsphere/new-product',
+          icon: <MdOutlineShoppingCart className="text-inherit h-5 w-5" />,
+          type: 'single'
+        },
+        {
+          name: 'Analytics',
+          path: '/admin/dashboards/marketsphere',
+          icon: <FaChartLine className="text-inherit h-5 w-5" />,
+          type: 'single'
+        },
+        {
+          name: 'Profile',
+          path: '/admin/main/profile/overview',
+          icon: <MdPerson className="text-inherit h-5 w-5" />,
+          type: 'single'
+        }
+      ];
+    }
+
+    // Admin menu items
+    return [
+      {
+        name: 'Dashboard',
+        path: '/admin/dashboards/welkome',
+        icon: <MdHome className="text-inherit h-5 w-5" />,
+        type: 'single'
+      },
+      {
+        name: 'User Management',
+        icon: <FaUserFriends />,
+        type: 'accordion',
+        items: [
+          { name: 'Roles & Permissions', path: '/admin/main/userManagement/roles-permissions' },
+          { name: 'Sub Admins', path: '/admin/main/userManagement/subadmins/list' },
+          { name: 'Users', path: '/admin/main/userManagement/users' },
+          { name: 'Become a Seller', path: '/admin/main/userManagement/become-a-seller' },
+          { name: 'Sellers', path: '/admin/main/userManagement/sellers' },
+          { name: 'Riders', path: '/admin/main/userManagement/riders' }
+        ]
+      },
+      {
+        name: 'MarketSphere',
+        icon: <FaShoppingBag />,
+        type: 'accordion',
+        items: [
+          { name: 'MarketSphere Dashboard', path: '/admin/dashboards/marketsphere' },
+          { name: 'Category Management', path: '/admin/main/marketsphere/category-management' },
+          { name: 'Brands Management', path: '/admin/main/marketsphere/brands-management' },
+          { name: 'Product Management', path: '/admin/main/marketsphere/product-management' },
+          { name: 'Orders', path: '/admin/main/ecommerce/order-details' },
+          { name: 'Promotions', path: '/admin/main/ecommerce/referrals' }
+        ]
+      },
+      {
+        name: 'Transit Plus',
+        icon: <MdDirectionsBus />,
+        type: 'accordion',
+        items: [
+          { name: 'Ride requests', path: '/admin/main/account/billing' },
+          { name: 'Drivers', path: '/admin/main/account/application' },
+          { name: 'Route History', path: '/admin/main/account/invoice' },
+          { name: 'Live Mapping/Tracking', path: '/admin/main/account/settings' },
+          { name: 'Delivery Partners', path: '/admin/main/account/all-courses' }
+        ]
+      },
+      {
+        name: 'StreamLink',
+        icon: <FaStream />,
+        type: 'accordion',
+        items: [
+          { name: 'Feed Moderation', path: '/admin/main/account/billing' },
+          { name: 'Comments & Reactions', path: '/admin/main/account/application' },
+          { name: 'Group Management', path: '/admin/main/account/invoice' },
+          { name: 'Reported Content', path: '/admin/main/account/settings' }
+        ]
+      },
+      {
+        name: 'HeartSync',
+        icon: <FaHeart />,
+        type: 'accordion',
+        items: [
+          { name: 'User Profiles', path: '/admin/main/account/billing' },
+          { name: 'Matchmaking Logs', path: '/admin/main/account/application' },
+          { name: 'Reports / Abuse', path: '/admin/main/account/invoice' },
+          { name: 'AI Settings', path: '/admin/main/account/settings' },
+          { name: 'Preferences Management', path: '/admin/main/account/settings' }
+        ]
+      },
+      {
+        name: 'CareerPath',
+        icon: <FaBriefcase />,
+        type: 'accordion',
+        items: [
+          { name: 'Job Listings', path: '/admin/main/account/billing' },
+          { name: 'Resume Submissions', path: '/admin/main/account/application' },
+          { name: 'Employer Profiles', path: '/admin/main/account/invoice' },
+          { name: 'Applications Review', path: '/admin/main/account/settings' },
+          { name: 'Job Curation Rules', path: '/admin/main/account/settings' }
+        ]
+      },
+      {
+        name: 'EduMatch',
+        icon: <FaGraduationCap />,
+        type: 'accordion',
+        items: [
+          { name: 'Scholarship Database', path: '/admin/main/account/billing' },
+          { name: 'AI Crawler Logs', path: '/admin/main/account/application' },
+          { name: 'Matching Rules', path: '/admin/main/account/invoice' },
+          { name: 'Applications Submitted', path: '/admin/main/account/settings' }
+        ]
+      },
+      {
+        name: 'AudioStream',
+        icon: <FaHeadphones />,
+        type: 'accordion',
+        items: [
+          { name: 'Audiobook Library', path: '/admin/main/account/billing' },
+          { name: 'Categories', path: '/admin/main/account/application' },
+          { name: 'Upload Requests', path: '/admin/main/account/invoice' },
+          { name: 'Streaming Stats', path: '/admin/main/account/settings' }
+        ]
+      },
+      {
+        name: 'WalletPro',
+        icon: <FaWallet />,
+        type: 'accordion',
+        items: [
+          { name: 'Transactions', path: '/admin/main/account/billing' },
+          { name: 'Wallet Balances', path: '/admin/main/account/application' },
+          { name: 'Payouts & Refunds', path: '/admin/main/account/invoice' },
+          { name: 'KYC Verifications', path: '/admin/main/account/settings' },
+          { name: 'Subscriptions', path: '/admin/main/account/settings' }
+        ]
+      }
+    ];
+  };
+
+  const staticMenuItems = getMenuItems();
 
   const createStaticLinks = () => {
     return staticMenuItems.map((item, key) => {

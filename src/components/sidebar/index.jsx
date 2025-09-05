@@ -13,9 +13,11 @@ import {
 import { Scrollbars } from "react-custom-scrollbars-2";
 import avatar4 from "assets/img/avatars/avatar4.png";
 import Card from "components/card";
+import { useAuthStore } from "stores/useAuthStore";
 
 function SidebarHorizon(props) {
   const { open, onClose, variant, mini, hovered, setHovered } = props;
+  const { user } = useAuthStore();
   
   return (
     <div
@@ -69,7 +71,7 @@ function SidebarHorizon(props) {
                     alt="Welkome Logo" 
                     className="h-8 w-8 object-contain"
                   />
-                  Welkome 
+                  {user?.role === 'seller' ? 'Seller Portal' : 'Welkome'} 
                 </div>
                 <div
                   className={`mt-1 ml-1 h-2.5 font-poppins text-[26px] font-bold uppercase text-navy-700 dark:text-white flex items-center justify-center ${
@@ -113,10 +115,10 @@ function SidebarHorizon(props) {
                   }`}
                 >
                   <h4 className="text-base font-bold text-navy-700 dark:text-white">
-                    Lawrence
+                    {user?.name || 'User'}
                   </h4>
                   <p className="text-sm font-medium text-gray-600">
-                    Product Designer
+                    {user?.role === 'seller' ? 'Verified Seller' : 'Administrator'}
                   </p>
                 </div>
               </div>

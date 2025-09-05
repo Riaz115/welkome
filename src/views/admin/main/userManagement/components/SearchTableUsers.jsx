@@ -169,7 +169,7 @@ function SearchTableUsers(props) {
       </div>
 
       <div className="mt-8 overflow-x-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500">
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[1200px]">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="!border-px !border-gray-400">

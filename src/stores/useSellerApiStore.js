@@ -136,6 +136,54 @@ const useSellerApiStore = create((set, get) => ({
     }
   },
 
+  // Block seller
+  blockSeller: async (id, blockReason) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axiosInstance.patch(`/seller/${id}/block`, {
+        blockReason
+      });
+      
+      // Update the seller in the local state
+      const { sellers } = get();
+      const updatedSellers = sellers.map(seller => 
+        seller._id === id 
+          ? { ...seller, isBlocked: true, blockReason }
+          : seller
+      );
+      set({ sellers: updatedSellers, loading: false });
+      
+      return response.data;
+    } catch (error) {
+      const errorMsg = error?.response?.data?.message || 'Failed to block seller';
+      set({ loading: false, error: errorMsg });
+      throw error;
+    }
+  },
+
+  // Unblock seller
+  unblockSeller: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axiosInstance.patch(`/seller/${id}/unblock`);
+      
+      // Update the seller in the local state
+      const { sellers } = get();
+      const updatedSellers = sellers.map(seller => 
+        seller._id === id 
+          ? { ...seller, isBlocked: false }
+          : seller
+      );
+      set({ sellers: updatedSellers, loading: false });
+      
+      return response.data;
+    } catch (error) {
+      const errorMsg = error?.response?.data?.message || 'Failed to unblock seller';
+      set({ loading: false, error: errorMsg });
+      throw error;
+    }
+  },
+
   // Delete seller
   deleteSeller: async (id) => {
     set({ loading: true, error: null });

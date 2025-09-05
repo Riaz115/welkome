@@ -4,7 +4,6 @@ import InputField from "components/fields/InputField";
 const Password = () => {
   return (
     <Card extra={"w-full mt-3 px-6 py-6"}>
-      {/* Header */}
       <div className="w-full px-2">
         <h4 className="text-xl font-bold text-navy-700 dark:text-white">
           Change Password
@@ -13,7 +12,6 @@ const Password = () => {
           Here you can set your new password
         </p>
       </div>
-      {/* inputs */}
       <div className="mt-9 grid grid-cols-1 gap-3">
         <InputField
           label="Old Password"
@@ -40,7 +38,6 @@ const Password = () => {
           </button>
         </div>
       </div>
-      {/* full width inputs */}
     </Card>
   );
 };

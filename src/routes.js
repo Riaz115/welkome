@@ -65,6 +65,7 @@ import BrandsManagement from 'views/admin/main/marketshphere/brandsManagement';
 import ProductManagement from 'views/admin/main/marketshphere/productManagement';
 import ProductSettings from 'views/admin/main/marketshphere/productManagement/productSettings';
 import NewProduct from 'views/admin/main/marketshphere/newProduct';
+import ProductView from 'views/admin/main/marketshphere/productView';
 
 // Others
 import OthersNotifications from 'views/admin/main/others/notifications';
@@ -365,6 +366,14 @@ const routes = [
             path: '/main/marketsphere/product-settings/:id',
             exact: false,
             component: <ProductSettings />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Product View',
+            layout: '/admin',
+            path: '/main/marketsphere/product-view/:id',
+            exact: false,
+            component: <ProductView />,
             hide: true, // Hide from navigation menu
           },
         ],

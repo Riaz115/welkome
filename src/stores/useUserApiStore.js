@@ -17,7 +17,6 @@ export const useUserApiStore = create((set, get) => ({
     } catch (error) {
       const errorMsg = error?.response?.data?.message || 'Failed to fetch users';
       set({ loading: false, error: errorMsg });
-      // Don't throw error - just return empty array
       return { data: [] };
     }
   },
@@ -27,7 +26,6 @@ export const useUserApiStore = create((set, get) => ({
     try {
       const response = await axiosInstance.patch(`/user/${userId}/block`);
       
-      // Update the user in the local state
       const { users } = get();
       const updatedUsers = users.map(user => 
         user._id === userId || user.id === userId 
@@ -41,7 +39,6 @@ export const useUserApiStore = create((set, get) => ({
     } catch (error) {
       const errorMsg = error?.response?.data?.message || 'Failed to block user';
       set({ loading: false, error: errorMsg });
-      // Don't throw error - just return null
       return null;
     }
   },
@@ -51,7 +48,6 @@ export const useUserApiStore = create((set, get) => ({
     try {
       const response = await axiosInstance.patch(`/user/${userId}/unblock`);
       
-      // Update the user in the local state
       const { users } = get();
       const updatedUsers = users.map(user => 
         user._id === userId || user.id === userId 
@@ -65,7 +61,6 @@ export const useUserApiStore = create((set, get) => ({
     } catch (error) {
       const errorMsg = error?.response?.data?.message || 'Failed to unblock user';
       set({ loading: false, error: errorMsg });
-      // Don't throw error - just return null
       return null;
     }
   },
@@ -79,15 +74,12 @@ export const useUserApiStore = create((set, get) => ({
     } catch (error) {
       const errorMsg = error?.response?.data?.message || 'Failed to fetch user details';
       set({ loading: false, error: errorMsg });
-      // Don't throw error - just return null
       return null;
     }
   },
 
-  // Clear error
   clearError: () => set({ error: null }),
 
-  // Reset store
   reset: () => set({ users: [], loading: false, error: null }),
 }));
 
