@@ -2,58 +2,6 @@ import axios from 'lib/axios';
 import { create } from 'zustand';
 import { toast } from 'react-toastify';
 
-// export const useAuthStore = create((set, get) => ({
-//   user: null,
-//   loading: false,
-//
-//   login: async ({ email, password,navigate }) => {
-//     set({ loading: true });
-//     try {
-//       const res = await axios.post('/auth/login', {
-//         emailOrPhone: email,
-//         password,
-//       });
-//
-//       const token = res.data.user.token;
-//       const user = res.data.user.token;
-//
-//       // Set axios auth header
-//       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // to get header without assigning token manually
-//
-//       // Save to localStorage
-//       localStorage.setItem('token', token);
-//       localStorage.setItem('user', JSON.stringify(user));
-//
-//       set({ user: res.data.user });
-//       set({ loading: false });
-//     } catch (error) {
-//       set({ loading: false });
-//       console.log(error);
-//       alert(error.response?.data?.message || 'Login failed');
-//       //   alert(error.response.data.message);
-//     }
-//   },
-//
-//   initialize: () => {
-//     const token = localStorage.getItem('token');
-//     const user = localStorage.getItem('user');
-//
-//     if (token && user) {
-//       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-//       set({ user: JSON.parse(user) });
-//     }
-//   },
-//
-//   logout: () => {
-//     localStorage.removeItem('token');
-//     localStorage.removeItem('user');
-//     delete axios.defaults.headers.common['Authorization'];
-//     set({ user: null });
-//   },
-//
-//
-//
-// }));
 
 
 
