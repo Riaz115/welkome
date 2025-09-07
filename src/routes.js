@@ -413,8 +413,8 @@ const routes = [
           },
           {
             name: 'Become a Seller',
-            layout: '/admin',
-            path: '/main/userManagement/become-a-seller',
+            layout: '/auth',
+            path: '/become-a-seller',
             exact: false,
             component: <BecomeASeller />,
           },

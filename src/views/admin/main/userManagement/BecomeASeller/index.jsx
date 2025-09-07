@@ -306,12 +306,24 @@ const BecomeASeller = () => {
       const successMessage = created?.message || 'Seller registration submitted successfully! Your application is under review.';
       toast.success(successMessage);
 
-      navigate('/admin/main/userManagement/sellers', {
-        state: { 
-          newRegistration: created?.data || created,
-          message: successMessage
-        }
-      });
+      // Redirect to sign-in page for public users, or to sellers page for authenticated users
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      if (user && user.role === 'admin') {
+        navigate('/admin/main/userManagement/sellers', {
+          state: { 
+            newRegistration: created?.data || created,
+            message: successMessage
+          }
+        });
+      } else {
+        // For public users, redirect to sign-in page with success message
+        navigate('/auth/sign-in/centered', {
+          state: { 
+            message: successMessage,
+            showSuccess: true
+          }
+        });
+      }
     } catch (error) {
       const errMsg = error?.response?.data?.message || 'Failed to submit seller registration. Please check console for details.';
       toast.error(errMsg);

@@ -105,7 +105,7 @@ export function SidebarLinks(props) {
           { name: 'Roles & Permissions', path: '/admin/main/userManagement/roles-permissions' },
           { name: 'Sub Admins', path: '/admin/main/userManagement/subadmins/list' },
           { name: 'Users', path: '/admin/main/userManagement/users' },
-          { name: 'Become a Seller', path: '/admin/main/userManagement/become-a-seller' },
+          { name: 'Become a Seller', path: '/auth/become-a-seller' },
           { name: 'Sellers', path: '/admin/main/userManagement/sellers' },
           { name: 'Riders', path: '/admin/main/userManagement/riders' }
         ]
