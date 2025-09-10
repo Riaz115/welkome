@@ -14,8 +14,12 @@ import {
   MdHome, 
   MdDirectionsBus, 
   MdLock,
+  MdLocationOn,
   MdOutlineShoppingCart,
-  MdPerson
+  MdPerson,
+  MdReceipt,
+  MdLocalOffer,
+  MdImage
 } from 'react-icons/md';
 import {
   FaBriefcase,
@@ -75,6 +79,12 @@ export function SidebarLinks(props) {
           type: 'single'
         },
         {
+          name: 'My Orders',
+          path: '/admin/main/orderManagement/all-orders',
+          icon: <MdReceipt className="text-inherit h-5 w-5" />,
+          type: 'single'
+        },
+        {
           name: 'Analytics',
           path: '/admin/dashboards/marketsphere',
           icon: <FaChartLine className="text-inherit h-5 w-5" />,
@@ -102,10 +112,9 @@ export function SidebarLinks(props) {
         icon: <FaUserFriends />,
         type: 'accordion',
         items: [
-          { name: 'Roles & Permissions', path: '/admin/main/userManagement/roles-permissions' },
-          { name: 'Sub Admins', path: '/admin/main/userManagement/subadmins/list' },
+         
           { name: 'Users', path: '/admin/main/userManagement/users' },
-          { name: 'Become a Seller', path: '/auth/become-a-seller' },
+       
           { name: 'Sellers', path: '/admin/main/userManagement/sellers' },
           { name: 'Riders', path: '/admin/main/userManagement/riders' }
         ]
@@ -119,91 +128,131 @@ export function SidebarLinks(props) {
           { name: 'Category Management', path: '/admin/main/marketsphere/category-management' },
           { name: 'Brands Management', path: '/admin/main/marketsphere/brands-management' },
           { name: 'Product Management', path: '/admin/main/marketsphere/product-management' },
-          { name: 'Orders', path: '/admin/main/ecommerce/order-details' },
           { name: 'Promotions', path: '/admin/main/ecommerce/referrals' }
         ]
       },
       {
-        name: 'Transit Plus',
-        icon: <MdDirectionsBus />,
+        name: 'Order Management',
+        icon: <MdReceipt />,
         type: 'accordion',
         items: [
-          { name: 'Ride requests', path: '/admin/main/account/billing' },
-          { name: 'Drivers', path: '/admin/main/account/application' },
-          { name: 'Route History', path: '/admin/main/account/invoice' },
-          { name: 'Live Mapping/Tracking', path: '/admin/main/account/settings' },
-          { name: 'Delivery Partners', path: '/admin/main/account/all-courses' }
+          { name: 'All Orders', path: '/admin/main/orderManagement/all-orders' },
+          { name: 'Admin Orders', path: '/admin/main/orderManagement/admin-orders' }
         ]
       },
       {
-        name: 'StreamLink',
-        icon: <FaStream />,
+        name: 'Coupon Management',
+        icon: <MdLocalOffer />,
         type: 'accordion',
         items: [
-          { name: 'Feed Moderation', path: '/admin/main/account/billing' },
-          { name: 'Comments & Reactions', path: '/admin/main/account/application' },
-          { name: 'Group Management', path: '/admin/main/account/invoice' },
-          { name: 'Reported Content', path: '/admin/main/account/settings' }
+          { name: 'All Coupons', path: '/admin/main/couponManagement' }
         ]
       },
       {
-        name: 'HeartSync',
-        icon: <FaHeart />,
+        name: 'Banner Management',
+        icon: <MdImage />,
         type: 'accordion',
         items: [
-          { name: 'User Profiles', path: '/admin/main/account/billing' },
-          { name: 'Matchmaking Logs', path: '/admin/main/account/application' },
-          { name: 'Reports / Abuse', path: '/admin/main/account/invoice' },
-          { name: 'AI Settings', path: '/admin/main/account/settings' },
-          { name: 'Preferences Management', path: '/admin/main/account/settings' }
+          { name: 'All Banners', path: '/admin/main/bannerManagement' }
         ]
       },
       {
-        name: 'CareerPath',
-        icon: <FaBriefcase />,
+        name: 'Flash Sale Management',
+        icon: <MdLocalOffer />,
         type: 'accordion',
         items: [
-          { name: 'Job Listings', path: '/admin/main/account/billing' },
-          { name: 'Resume Submissions', path: '/admin/main/account/application' },
-          { name: 'Employer Profiles', path: '/admin/main/account/invoice' },
-          { name: 'Applications Review', path: '/admin/main/account/settings' },
-          { name: 'Job Curation Rules', path: '/admin/main/account/settings' }
+          { name: 'All Flash Sales', path: '/admin/main/flashSaleManagement' }
         ]
       },
       {
-        name: 'EduMatch',
-        icon: <FaGraduationCap />,
+        name: 'Address Management',
+        icon: <MdLocationOn />,
         type: 'accordion',
         items: [
-          { name: 'Scholarship Database', path: '/admin/main/account/billing' },
-          { name: 'AI Crawler Logs', path: '/admin/main/account/application' },
-          { name: 'Matching Rules', path: '/admin/main/account/invoice' },
-          { name: 'Applications Submitted', path: '/admin/main/account/settings' }
+          { name: 'All Addresses', path: '/admin/main/addressManagement' }
         ]
       },
-      {
-        name: 'AudioStream',
-        icon: <FaHeadphones />,
-        type: 'accordion',
-        items: [
-          { name: 'Audiobook Library', path: '/admin/main/account/billing' },
-          { name: 'Categories', path: '/admin/main/account/application' },
-          { name: 'Upload Requests', path: '/admin/main/account/invoice' },
-          { name: 'Streaming Stats', path: '/admin/main/account/settings' }
-        ]
-      },
-      {
-        name: 'WalletPro',
-        icon: <FaWallet />,
-        type: 'accordion',
-        items: [
-          { name: 'Transactions', path: '/admin/main/account/billing' },
-          { name: 'Wallet Balances', path: '/admin/main/account/application' },
-          { name: 'Payouts & Refunds', path: '/admin/main/account/invoice' },
-          { name: 'KYC Verifications', path: '/admin/main/account/settings' },
-          { name: 'Subscriptions', path: '/admin/main/account/settings' }
-        ]
-      }
+      // {
+      //   name: 'Transit Plus',
+      //   icon: <MdDirectionsBus />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Ride requests', path: '/admin/main/account/billing' },
+      //     { name: 'Drivers', path: '/admin/main/account/application' },
+      //     { name: 'Route History', path: '/admin/main/account/invoice' },
+      //     { name: 'Live Mapping/Tracking', path: '/admin/main/account/settings' },
+      //     { name: 'Delivery Partners', path: '/admin/main/account/all-courses' }
+      //   ]
+      // },
+      // {
+      //   name: 'StreamLink',
+      //   icon: <FaStream />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Feed Moderation', path: '/admin/main/account/billing' },
+      //     { name: 'Comments & Reactions', path: '/admin/main/account/application' },
+      //     { name: 'Group Management', path: '/admin/main/account/invoice' },
+      //     { name: 'Reported Content', path: '/admin/main/account/settings' }
+      //   ]
+      // },
+      // {
+      //   name: 'HeartSync',
+      //   icon: <FaHeart />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'User Profiles', path: '/admin/main/account/billing' },
+      //     { name: 'Matchmaking Logs', path: '/admin/main/account/application' },
+      //     { name: 'Reports / Abuse', path: '/admin/main/account/invoice' },
+      //     { name: 'AI Settings', path: '/admin/main/account/settings' },
+      //     { name: 'Preferences Management', path: '/admin/main/account/settings' }
+      //   ]
+      // },
+      // {
+      //   name: 'CareerPath',
+      //   icon: <FaBriefcase />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Job Listings', path: '/admin/main/account/billing' },
+      //     { name: 'Resume Submissions', path: '/admin/main/account/application' },
+      //     { name: 'Employer Profiles', path: '/admin/main/account/invoice' },
+      //     { name: 'Applications Review', path: '/admin/main/account/settings' },
+      //     { name: 'Job Curation Rules', path: '/admin/main/account/settings' }
+      //   ]
+      // },
+      // {
+      //   name: 'EduMatch',
+      //   icon: <FaGraduationCap />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Scholarship Database', path: '/admin/main/account/billing' },
+      //     { name: 'AI Crawler Logs', path: '/admin/main/account/application' },
+      //     { name: 'Matching Rules', path: '/admin/main/account/invoice' },
+      //     { name: 'Applications Submitted', path: '/admin/main/account/settings' }
+      //   ]
+      // },
+      // {
+      //   name: 'AudioStream',
+      //   icon: <FaHeadphones />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Audiobook Library', path: '/admin/main/account/billing' },
+      //     { name: 'Categories', path: '/admin/main/account/application' },
+      //     { name: 'Upload Requests', path: '/admin/main/account/invoice' },
+      //     { name: 'Streaming Stats', path: '/admin/main/account/settings' }
+      //   ]
+      // },
+      // {
+      //   name: 'WalletPro',
+      //   icon: <FaWallet />,
+      //   type: 'accordion',
+      //   items: [
+      //     { name: 'Transactions', path: '/admin/main/account/billing' },
+      //     { name: 'Wallet Balances', path: '/admin/main/account/application' },
+      //     { name: 'Payouts & Refunds', path: '/admin/main/account/invoice' },
+      //     { name: 'KYC Verifications', path: '/admin/main/account/settings' },
+      //     { name: 'Subscriptions', path: '/admin/main/account/settings' }
+      //   ]
+      // }
     ];
   };
 

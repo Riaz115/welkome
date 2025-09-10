@@ -1316,7 +1316,7 @@ const ProductManagement = () => {
             { key: 'pending', label: 'Pending', count: products.filter(p => p.status === 'pending').length },
             { key: 'approved', label: 'Approved', count: products.filter(p => p.status === 'approved').length },
             { key: 'rejected', label: 'Rejected', count: products.filter(p => p.status === 'rejected').length },
-            ...(user?.role === 'admin' ? [{ key: 'admin', label: 'My Products', count: products.filter(p => {
+            ...(user?.role === 'admin' ? [{ key: 'admin', label: 'Admin Products', count: products.filter(p => {
               const creatorId = p.creator?.id?.$oid || p.creator?.id;
               const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
               const userId = currentUser.id || currentUser._id;

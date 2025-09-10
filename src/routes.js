@@ -2,7 +2,9 @@ import {
   MdDashboard,
   MdHome,
   MdLock,
+  MdLocationOn,
   MdOutlineShoppingCart,
+  MdReceipt,
 } from 'react-icons/md';
 
 // Admin Imports
@@ -66,6 +68,31 @@ import ProductManagement from 'views/admin/main/marketshphere/productManagement'
 import ProductSettings from 'views/admin/main/marketshphere/productManagement/productSettings';
 import NewProduct from 'views/admin/main/marketshphere/newProduct';
 import ProductView from 'views/admin/main/marketshphere/productView';
+
+// Order Management Imports
+import AllOrders from 'views/admin/main/orderManagement/allOrders';
+import AdminOrders from 'views/admin/main/orderManagement/adminOrders';
+import OrderDetail from 'views/admin/main/orderManagement/orderDetail';
+
+// Coupon Management Imports
+import CouponList from 'views/admin/main/couponManagement/couponList';
+import CouponForm from 'views/admin/main/couponManagement/couponForm';
+import CouponDetail from 'views/admin/main/couponManagement/couponDetail';
+
+// Banner Management Imports
+import BannerList from 'views/admin/main/bannerManagement/bannerList';
+import BannerForm from 'views/admin/main/bannerManagement/bannerForm';
+import BannerDetail from 'views/admin/main/bannerManagement/bannerDetail';
+
+// Flash Sale Management Imports
+import FlashSaleList from 'views/admin/main/flashSaleManagement/flashSaleList';
+import FlashSaleForm from 'views/admin/main/flashSaleManagement/flashSaleForm';
+import FlashSaleDetail from 'views/admin/main/flashSaleManagement/flashSaleDetail';
+
+// Address Management Imports
+import AddressList from 'views/admin/main/addressManagement/addressList';
+import AddressForm from 'views/admin/main/addressManagement/addressForm';
+import AddressDetail from 'views/admin/main/addressManagement/addressDetail';
 
 // Others
 import OthersNotifications from 'views/admin/main/others/notifications';
@@ -374,6 +401,192 @@ const routes = [
             path: '/main/marketsphere/product-view/:id',
             exact: false,
             component: <ProductView />,
+            hide: true, // Hide from navigation menu
+          },
+        ],
+      },
+      {
+        name: 'Order Management',
+        path: '/orderManagement',
+        icon: <MdReceipt className="text-inherit h-5 w-5" />,
+        collapse: true,
+        items: [
+          {
+            name: 'All Orders',
+            layout: '/admin',
+            path: '/main/orderManagement/all-orders',
+            exact: false,
+            component: <AllOrders />,
+          },
+          {
+            name: 'Admin Orders',
+            layout: '/admin',
+            path: '/main/orderManagement/admin-orders',
+            exact: false,
+            component: <AdminOrders />,
+          },
+          {
+            name: 'Order Detail',
+            layout: '/admin',
+            path: '/main/orderManagement/order-detail/:id',
+            exact: false,
+            component: <OrderDetail />,
+            hide: true, // Hide from navigation menu
+          },
+        ],
+      },
+      {
+        name: 'Coupon Management',
+        path: '/couponManagement',
+        icon: <MdOutlineShoppingCart className="text-inherit h-5 w-5" />,
+        collapse: true,
+        items: [
+          {
+            name: 'All Coupons',
+            layout: '/admin',
+            path: '/main/couponManagement',
+            exact: false,
+            component: <CouponList />,
+          },
+          {
+            name: 'Add Coupon',
+            layout: '/admin',
+            path: '/main/couponManagement/add-coupon',
+            exact: false,
+            component: <CouponForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Edit Coupon',
+            layout: '/admin',
+            path: '/main/couponManagement/edit-coupon/:id',
+            exact: false,
+            component: <CouponForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Coupon Detail',
+            layout: '/admin',
+            path: '/main/couponManagement/coupon-detail/:id',
+            exact: false,
+            component: <CouponDetail />,
+            hide: true, // Hide from navigation menu
+          },
+        ],
+      },
+      {
+        name: 'Banner Management',
+        path: '/bannerManagement',
+        icon: <MdOutlineShoppingCart className="text-inherit h-5 w-5" />,
+        collapse: true,
+        items: [
+          {
+            name: 'All Banners',
+            layout: '/admin',
+            path: '/main/bannerManagement',
+            exact: false,
+            component: <BannerList />,
+          },
+          {
+            name: 'Add Banner',
+            layout: '/admin',
+            path: '/main/bannerManagement/add-banner',
+            exact: false,
+            component: <BannerForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Edit Banner',
+            layout: '/admin',
+            path: '/main/bannerManagement/edit-banner/:id',
+            exact: false,
+            component: <BannerForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Banner Detail',
+            layout: '/admin',
+            path: '/main/bannerManagement/banner-detail/:id',
+            exact: false,
+            component: <BannerDetail />,
+            hide: true, // Hide from navigation menu
+          },
+        ],
+      },
+      {
+        name: 'Flash Sale Management',
+        path: '/flashSaleManagement',
+        icon: <MdReceipt className="text-inherit h-5 w-5" />,
+        collapse: true,
+        items: [
+          {
+            name: 'All Flash Sales',
+            layout: '/admin',
+            path: '/main/flashSaleManagement',
+            exact: false,
+            component: <FlashSaleList />,
+          },
+          {
+            name: 'Add Flash Sale',
+            layout: '/admin',
+            path: '/main/flashSaleManagement/add-flashsale',
+            exact: false,
+            component: <FlashSaleForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Edit Flash Sale',
+            layout: '/admin',
+            path: '/main/flashSaleManagement/edit-flashsale/:id',
+            exact: false,
+            component: <FlashSaleForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Flash Sale Detail',
+            layout: '/admin',
+            path: '/main/flashSaleManagement/flashsale-detail/:id',
+            exact: false,
+            component: <FlashSaleDetail />,
+            hide: true, // Hide from navigation menu
+          },
+        ],
+      },
+      {
+        name: 'Address Management',
+        path: '/addressManagement',
+        icon: <MdLocationOn className="text-inherit h-5 w-5" />,
+        collapse: true,
+        items: [
+          {
+            name: 'All Addresses',
+            layout: '/admin',
+            path: '/main/addressManagement',
+            exact: false,
+            component: <AddressList />,
+          },
+          {
+            name: 'Add Address',
+            layout: '/admin',
+            path: '/main/addressManagement/add-address',
+            exact: false,
+            component: <AddressForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Edit Address',
+            layout: '/admin',
+            path: '/main/addressManagement/edit-address/:id',
+            exact: false,
+            component: <AddressForm />,
+            hide: true, // Hide from navigation menu
+          },
+          {
+            name: 'Address Detail',
+            layout: '/admin',
+            path: '/main/addressManagement/address-detail/:id',
+            exact: false,
+            component: <AddressDetail />,
             hide: true, // Hide from navigation menu
           },
         ],

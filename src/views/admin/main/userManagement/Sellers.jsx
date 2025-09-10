@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Card from "components/card";
 import SearchTableUsers from "./components/SearchTableUsers";
 import { createColumnHelper } from "@tanstack/react-table";
-import { MdVerified, MdBlock, MdClose, MdVisibility, MdEdit, MdMoreVert, MdStore, MdPending, MdCheckCircle, MdCancel } from "react-icons/md";
-import { IoFilterSharp } from "react-icons/io5";
+import { CarouselTabs } from "components/carousel";
+import { MdVerified, MdBlock, MdClose, MdVisibility, MdMoreVert, MdStore, MdPending, MdCheckCircle, MdCancel } from "react-icons/md";
 import useSellerApiStore from "stores/useSellerApiStore";
 import { toast } from "react-toastify";
 
@@ -12,7 +12,7 @@ const columnHelper = createColumnHelper();
 
 const Sellers = () => {
   const navigate = useNavigate();
-  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("pending");
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -56,14 +56,8 @@ const Sellers = () => {
 
   // Filter sellers based on selected status
   const filteredSellers = useMemo(() => {
-    if (selectedStatus === "all") {
-      return sellersArray;
-    }
     if (selectedStatus === "blocked") {
       return sellersArray.filter(seller => seller.verificationStatus === "approved" && seller.isBlocked === true);
-    }
-    if (selectedStatus === "unblocked") {
-      return sellersArray.filter(seller => seller.verificationStatus === "approved" && seller.isBlocked === false);
     }
     return sellersArray.filter(seller => seller.verificationStatus === selectedStatus);
   }, [sellersArray, selectedStatus]);
@@ -75,22 +69,12 @@ const Sellers = () => {
       pending: sellersArray.filter(s => s.verificationStatus === "pending").length,
       approved: sellersArray.filter(s => s.verificationStatus === "approved").length,
       rejected: sellersArray.filter(s => s.verificationStatus === "rejected").length,
-      blocked: sellersArray.filter(s => s.verificationStatus === "approved" && s.isBlocked === true).length,
-      unblocked: sellersArray.filter(s => s.verificationStatus === "approved" && s.isBlocked === false).length
+      blocked: sellersArray.filter(s => s.verificationStatus === "approved" && s.isBlocked === true).length
     };
   };
 
   const stats = getStatusStats();
 
-  // Status options for filtering
-  const statusOptions = [
-    { value: "all", label: "All Sellers", count: stats.total },
-    { value: "pending", label: "Pending", count: stats.pending },
-    { value: "approved", label: "Approved", count: stats.approved },
-    { value: "rejected", label: "Rejected", count: stats.rejected },
-    { value: "blocked", label: "Blocked", count: stats.blocked },
-    { value: "unblocked", label: "Unblocked", count: stats.unblocked }
-  ];
 
   const handleDropdownToggle = (rowIndex, event) => {
     event.stopPropagation();
@@ -510,12 +494,6 @@ const Sellers = () => {
                 Manage seller accounts, verification, and marketplace access
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <IoFilterSharp className="w-5 h-5 text-gray-500" />
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Filter by Status
-              </span>
-            </div>
           </div>
 
           {/* Statistics Cards */}
@@ -569,21 +547,34 @@ const Sellers = () => {
             </div>
           </div>
 
-          {/* Status Filter Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {statusOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setSelectedStatus(option.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  selectedStatus === option.value
-                    ? "bg-brand-500 text-white shadow-lg dark:bg-brand-400"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                }`}
-              >
-                {option.label} ({option.count})
-              </button>
-            ))}
+          {/* Status Filter Tabs */}
+          <div className="mb-6">
+            <CarouselTabs
+              tabs={[
+                { 
+                  key: 'pending', 
+                  label: 'Pending', 
+                  count: stats.pending 
+                },
+                { 
+                  key: 'approved', 
+                  label: 'Approved', 
+                  count: stats.approved 
+                },
+                { 
+                  key: 'rejected', 
+                  label: 'Rejected', 
+                  count: stats.rejected 
+                },
+                { 
+                  key: 'blocked', 
+                  label: 'Blocked', 
+                  count: stats.blocked 
+                }
+              ]}
+              activeTab={selectedStatus}
+              onTabChange={setSelectedStatus}
+            />
           </div>
         </Card>
       </div>
@@ -593,7 +584,7 @@ const Sellers = () => {
         <SearchTableUsers
           tableData={filteredSellers}
           columns={sellersColumns}
-          title={`Sellers ${selectedStatus !== "all" ? `- ${statusOptions.find(s => s.value === selectedStatus)?.label}` : ""}`}
+          title={`Sellers - ${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}`}
         />
       </div>
 

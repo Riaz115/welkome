@@ -184,7 +184,7 @@ const Navbar = (props) => {
                
                 <button
                   onClick={handleLogout}
-                  className="mt-3 text-sm font-medium text-red-500 hover:text-red-500 cursor-pointer"
+                  className="mt-3 text-sm text-left font-medium text-red-500 hover:text-red-500 cursor-pointer"
                 >
                   Log Out
                 </button>

@@ -12,6 +12,16 @@
 		letter-spacing: -0.5px;
 	}
 }
+
+@layer utilities {
+	.scrollbar-hide {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+	.scrollbar-hide::-webkit-scrollbar {
+		display: none;
+	}
+}
 input.defaultCheckbox{
 	 color: white; 
 } 
